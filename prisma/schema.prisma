@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  clients   Client[]
+}
+
+model Client {
+  id            String        @id @default(uuid())
+  fullName      String
+  phoneNumber   String
+  brokerageFirm String
+  city          String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+}
+
+model Stock {
+  id          String        @id @default(uuid())
+  symbol      String        @unique
+  name        String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+model Broker {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  code         String        @unique
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+model Transaction {
+  id              String          @id @default(uuid())
+  type            TransactionType
+  lots            Int             // Miktar lot olarak
+  price           Float
+  date            DateTime
+  brokerageFirm   String?         // Eski aracı kurum bilgisi (geçici)
+  brokerId        String?         // Yeni broker ilişkisi
+  broker          Broker?         @relation(fields: [brokerId], references: [id])
+  commission      Float?
+  profit          Float?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  clientId        String
+  client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  stockId         String
+  stock           Stock           @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  // Satış işlemleri için alış referansı
+  buyTransactionId String?        // Hangi alış işleminden satış yapıldığı
+  buyTransaction   Transaction?   @relation("BuySellReference", fields: [buyTransactionId], references: [id])
+  sellTransactions Transaction[]  @relation("BuySellReference")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TransactionType {
+  BUY
+  SELL
+}
