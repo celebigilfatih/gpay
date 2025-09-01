@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]/options";
+import type { Session } from "next-auth";
 
 // GET all clients for the logged-in user
 export async function GET(_request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const session = await getServerSession(authOptions) as Session | null;
+   if (!session || !session.user) {
+     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+   }
 
   try {
     const clients = await prisma.client.findMany({
       where: {
-        userId: session.user.id as string,
+        userId: session.user.id,
       },
       orderBy: {
         fullName: "asc",
@@ -33,7 +33,7 @@ export async function GET(_request: NextRequest) {
 
 // POST create a new client
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions) as Session | null;
 
   if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         phoneNumber,
         brokerageFirm,
         city,
-        userId: session.user.id as string,
+        userId: session.user.id,
       },
     });
 

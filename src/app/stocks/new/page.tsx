@@ -22,7 +22,7 @@ type StockFormValues = z.infer<typeof stockSchema>;
 
 export default function NewStockPage() {
   const [submitting, setSubmitting] = useState(false);
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
 
   const form = useForm<StockFormValues>({

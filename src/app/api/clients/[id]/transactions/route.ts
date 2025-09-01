@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../../../auth/[...nextauth]/options";
+import type { Session } from "next-auth";
 import { TransactionType } from "@prisma/client";
 
 // GET transactions for a specific client
@@ -9,11 +10,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const session = await getServerSession(authOptions) as Session | null;
+   if (!session || !session.user) {
+     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+   }
 
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
@@ -45,6 +45,7 @@ export async function GET(
       include: {
         client: true,
         stock: true,
+        broker: true,
         buyTransaction: {
           include: {
             stock: true,

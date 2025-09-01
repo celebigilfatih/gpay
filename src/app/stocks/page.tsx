@@ -19,7 +19,8 @@ export default function StocksPage() {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const { data: session, status } = useSession();
+  // const { data: session } = useSession(); // Geçici olarak kullanılmıyor
+  const { status } = useSession();
   const router = useRouter();
 
   useEffect(() => {

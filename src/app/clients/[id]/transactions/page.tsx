@@ -34,6 +34,10 @@ type Transaction = {
   commission: number | null;
   notes: string | null;
   stock: Stock;
+  broker?: {
+    id: string;
+    name: string;
+  };
   buyTransaction?: {
     id: string;
     date: string;
@@ -213,7 +217,7 @@ export default function ClientTransactionsPage() {
                       </TableCell>
                       <TableCell>{transaction.lots}</TableCell>
                       <TableCell>{transaction.price.toLocaleString('tr-TR')} ₺</TableCell>
-                      <TableCell>{transaction.brokerageFirm}</TableCell>
+                      <TableCell>{transaction.broker?.name || transaction.brokerageFirm || "-"}</TableCell>
                       <TableCell>
                         {transaction.buyTransaction ? (
                           <div className="text-sm">

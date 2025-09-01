@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../../auth/[...nextauth]/options";
+import type { Session } from "next-auth";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -10,11 +11,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session | null;
 
-    if (!session || !session.user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+     if (!session || !session.user) {
+       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+     }
 
     const { id: stockId } = await params;
 
@@ -43,7 +44,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session | null;
 
     if (!session || !session.user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -97,7 +98,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session | null;
 
     if (!session || !session.user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

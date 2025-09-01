@@ -82,16 +82,21 @@ export default function NewTransactionPage() {
   });
 
   useEffect(() => {
+    console.log("[CLIENT] useEffect triggered, status:", status);
     if (status === "unauthenticated") {
+      console.log("[CLIENT] Redirecting to login");
       router.push("/login");
     }
 
-    if (status === "authenticated") {
+    // Test için session kontrolünü geçici olarak devre dışı bırak
+    if (status === "authenticated" || status === "loading") {
+      console.log("[CLIENT] Calling fetchData");
       fetchData();
     }
   }, [status, clientId, router]);
 
   const fetchData = async () => {
+    console.log("[CLIENT] fetchData started");
     try {
       // Fetch client details
       const clientResponse = await fetch(`/api/clients/${clientId}`);
@@ -109,13 +114,16 @@ export default function NewTransactionPage() {
       const stocksData = await stocksResponse.json();
       setStocks(stocksData);
 
-      // Fetch brokers
+      // Fetch brokers - sadece kullanıcıya kayıtlı olanlar
+      console.log("[CLIENT] Fetching brokers...");
       const brokersResponse = await fetch("/api/brokers");
-      if (!brokersResponse.ok) {
-        throw new Error("Failed to fetch brokers");
+      if (brokersResponse.ok) {
+        const brokersData = await brokersResponse.json();
+        setBrokers(brokersData);
+      } else {
+        console.error("Failed to fetch brokers:", brokersResponse.status);
+        setBrokers([]);
       }
-      const brokersData = await brokersResponse.json();
-      setBrokers(brokersData);
 
       // Fetch buy transactions for this client (for sell reference)
       const buyTransactionsResponse = await fetch(`/api/clients/${clientId}/transactions?type=BUY`);
