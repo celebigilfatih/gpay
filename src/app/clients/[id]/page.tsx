@@ -303,7 +303,7 @@ export default function ClientDetailPage() {
     return (
       <>
         <Navbar />
-        <div className="container py-10">
+        <div className="container mx-auto px-4 py-10">
           <p>Yükleniyor...</p>
         </div>
       </>
@@ -314,7 +314,7 @@ export default function ClientDetailPage() {
     return (
       <>
         <Navbar />
-        <div className="container py-10">
+        <div className="container mx-auto px-4 py-10">
           <p>Müşteri bulunamadı.</p>
           <Button asChild className="mt-4">
             <Link href="/clients">Müşteri Listesine Dön</Link>
@@ -327,7 +327,7 @@ export default function ClientDetailPage() {
   return (
     <>
       <Navbar />
-      <div className="container py-10">
+      <div className="container mx-auto px-4 py-10">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold">{client.fullName}</h1>

@@ -127,7 +127,7 @@ export default function EditStockPage() {
     return (
       <>
         <Navbar />
-        <div className="container py-10">
+        <div className="container mx-auto px-4 py-10">
           <p>Yükleniyor...</p>
         </div>
       </>
@@ -138,7 +138,7 @@ export default function EditStockPage() {
     return (
       <>
         <Navbar />
-        <div className="container py-10">
+        <div className="container mx-auto px-4 py-10">
           <p>Hisse senedi bulunamadı.</p>
           <Button asChild className="mt-4">
             <Link href="/stocks">Hisse Senetlerine Dön</Link>
@@ -151,7 +151,7 @@ export default function EditStockPage() {
   return (
     <>
       <Navbar />
-      <div className="container py-10">
+      <div className="container mx-auto px-4 py-10">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Hisse Senedi Düzenle</h1>
           <Button variant="outline" asChild>

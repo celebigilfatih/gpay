@@ -12,33 +12,33 @@ export function Navbar() {
       <div className="container mx-auto px-4 flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-xl font-bold">
-            GPay
+            Gain Stock & Payment
           </Link>
           {session && (
             <div className="hidden md:flex gap-4">
-              <Link href="/dashboard">Dashboard</Link>
-              <Link href="/clients">Clients</Link>
-              <Link href="/brokers">Brokers</Link>
-              <Link href="/transactions">Transactions</Link>
-              <Link href="/stocks">Stocks</Link>
+              <Link href="/dashboard">Gösterge Paneli</Link>
+              <Link href="/clients">Müşteriler</Link>
+              <Link href="/brokers">Aracı Kurumlar</Link>
+              <Link href="/transactions">İşlemler</Link>
+              <Link href="/stocks">Hisse Senetleri</Link>
             </div>
           )}
         </div>
         <div>
           {session ? (
             <div className="flex items-center gap-4">
-              <span>Welcome, {session.user?.name}</span>
+              <span>Hoş geldiniz, {session.user?.name}</span>
               <Button variant="outline" onClick={() => signOut()}>
-                Sign Out
+                Çıkış Yap
               </Button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <Button variant="outline" asChild>
-                <Link href="/login">Login</Link>
+                <Link href="/login">Giriş Yap</Link>
               </Button>
               <Button asChild>
-                <Link href="/register">Register</Link>
+                <Link href="/register">Kayıt Ol</Link>
               </Button>
             </div>
           )}

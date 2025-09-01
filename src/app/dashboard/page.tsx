@@ -70,7 +70,7 @@ export default function DashboardPage() {
     return (
       <>
         <Navbar />
-        <div className="container py-10">
+        <div className="container mx-auto px-4 py-10">
           <p>Yükleniyor...</p>
         </div>
       </>
@@ -81,7 +81,7 @@ export default function DashboardPage() {
     return (
       <>
         <Navbar />
-        <div className="container py-10">
+        <div className="container mx-auto px-4 py-10">
           <p>İstatistikler yüklenemedi.</p>
         </div>
       </>
@@ -91,7 +91,7 @@ export default function DashboardPage() {
   return (
     <>
       <Navbar />
-      <div className="container py-10">
+      <div className="container mx-auto px-4 py-10">
         <h1 className="text-3xl font-bold mb-6">Gösterge Paneli</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -141,29 +141,29 @@ export default function DashboardPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Tarih</TableHead>
-                      <TableHead>Müşteri</TableHead>
-                      <TableHead>Hisse</TableHead>
-                      <TableHead>İşlem</TableHead>
-                      <TableHead>Tutar</TableHead>
+                      <TableHead className="text-left">Tarih</TableHead>
+                      <TableHead className="text-left">Müşteri</TableHead>
+                      <TableHead className="text-center">Hisse</TableHead>
+                      <TableHead className="text-center">İşlem</TableHead>
+                      <TableHead className="text-right">Tutar</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {stats.recentTransactions.map((transaction) => (
                       <TableRow key={transaction.id}>
-                        <TableCell>{new Date(transaction.date).toLocaleDateString('tr-TR')}</TableCell>
-                        <TableCell>
+                        <TableCell className="text-left">{new Date(transaction.date).toLocaleDateString('tr-TR')}</TableCell>
+                        <TableCell className="text-left">
                           <Link href={`/clients/${transaction.clientId}`} className="text-blue-600 hover:underline">
                             {transaction.clientName}
                           </Link>
                         </TableCell>
-                        <TableCell>{transaction.stockSymbol}</TableCell>
-                        <TableCell>
-                          <span className={transaction.type === "BUY" ? "text-green-600" : "text-red-600"}>
+                        <TableCell className="text-center font-medium">{transaction.stockSymbol}</TableCell>
+                        <TableCell className="text-center">
+                          <span className={transaction.type === "BUY" ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
                             {transaction.type === "BUY" ? "ALIŞ" : "SATIŞ"}
                           </span>
                         </TableCell>
-                        <TableCell>{(transaction.lots * transaction.price).toLocaleString('tr-TR')} ₺</TableCell>
+                        <TableCell className="text-right font-medium">{(transaction.lots * transaction.price).toLocaleString('tr-TR')} ₺</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -188,23 +188,23 @@ export default function DashboardPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Müşteri</TableHead>
-                      <TableHead>İşlem Sayısı</TableHead>
-                      <TableHead>Toplam Kar</TableHead>
-                      <TableHead>Toplam Komisyon</TableHead>
+                      <TableHead className="text-left">Müşteri</TableHead>
+                      <TableHead className="text-center">İşlem Sayısı</TableHead>
+                      <TableHead className="text-right">Toplam Kar</TableHead>
+                      <TableHead className="text-right">Toplam Komisyon</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {stats.topClients.map((client) => (
                       <TableRow key={client.id}>
-                        <TableCell>
+                        <TableCell className="text-left">
                           <Link href={`/clients/${client.id}`} className="text-blue-600 hover:underline">
                             {client.fullName}
                           </Link>
                         </TableCell>
-                        <TableCell>{client.transactionCount}</TableCell>
-                        <TableCell className="text-green-600">{client.totalProfit.toLocaleString('tr-TR')} ₺</TableCell>
-                        <TableCell className="text-blue-600">{client.totalCommission.toLocaleString('tr-TR')} ₺</TableCell>
+                        <TableCell className="text-center font-medium">{client.transactionCount}</TableCell>
+                        <TableCell className="text-right text-green-600 font-medium">{client.totalProfit.toLocaleString('tr-TR')} ₺</TableCell>
+                        <TableCell className="text-right text-blue-600 font-medium">{client.totalCommission.toLocaleString('tr-TR')} ₺</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
