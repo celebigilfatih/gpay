@@ -6,8 +6,9 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 // GET a specific client
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
@@ -17,7 +18,7 @@ export async function GET(
   try {
     const client = await prisma.client.findUnique({
       where: {
-        id: params.id,
+        id,
       },
       include: {
         transactions: {
@@ -36,7 +37,7 @@ export async function GET(
     }
 
     // Check if the client belongs to the logged-in user
-    if (client.userId !== session.user.id) {
+    if (client.userId !== (session.user.id as string)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -53,8 +54,9 @@ export async function GET(
 // PUT update a client
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
@@ -65,7 +67,7 @@ export async function PUT(
     // First check if the client exists and belongs to the user
     const existingClient = await prisma.client.findUnique({
       where: {
-        id: params.id,
+        id,
       },
     });
 
@@ -73,7 +75,7 @@ export async function PUT(
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    if (existingClient.userId !== session.user.id) {
+    if (existingClient.userId !== (session.user.id as string)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -89,7 +91,7 @@ export async function PUT(
 
     const updatedClient = await prisma.client.update({
       where: {
-        id: params.id,
+        id,
       },
       data: {
         fullName,
@@ -112,8 +114,9 @@ export async function PUT(
 // DELETE a client
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
@@ -124,7 +127,7 @@ export async function DELETE(
     // First check if the client exists and belongs to the user
     const existingClient = await prisma.client.findUnique({
       where: {
-        id: params.id,
+        id,
       },
     });
 
@@ -132,14 +135,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    if (existingClient.userId !== session.user.id) {
+    if (existingClient.userId !== (session.user.id as string)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Delete the client (cascade delete will remove related transactions)
     await prisma.client.delete({
       where: {
-        id: params.id,
+        id,
       },
     });
 

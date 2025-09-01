@@ -13,8 +13,9 @@ const brokerUpdateSchema = z.object({
 // GET - Tek aracı kurum getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -22,7 +23,7 @@ export async function GET(
     }
 
     const broker = await prisma.broker.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {
@@ -52,8 +53,9 @@ export async function GET(
 // PUT - Aracı kurum güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -65,7 +67,7 @@ export async function PUT(
 
     // Mevcut broker var mı kontrol et
     const existingBroker = await prisma.broker.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingBroker) {
@@ -80,7 +82,7 @@ export async function PUT(
       const duplicateBroker = await prisma.broker.findFirst({
         where: {
           AND: [
-            { id: { not: params.id } },
+            { id: { not: id } },
             {
               OR: [
                 validatedData.name ? { name: validatedData.name } : {},
@@ -100,7 +102,7 @@ export async function PUT(
     }
 
     const updatedBroker = await prisma.broker.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
       include: {
         _count: {
@@ -115,7 +117,7 @@ export async function PUT(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Validation error", details: error.errors },
+        { error: "Validation error", details: error.issues },
         { status: 400 }
       );
     }
@@ -131,8 +133,9 @@ export async function PUT(
 // DELETE - Aracı kurum sil
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -141,7 +144,7 @@ export async function DELETE(
 
     // Mevcut broker var mı kontrol et
     const existingBroker = await prisma.broker.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {
@@ -167,7 +170,7 @@ export async function DELETE(
     }
 
     await prisma.broker.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Aracı kurum başarıyla silindi" });

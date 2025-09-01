@@ -179,7 +179,7 @@ type Client = {
 type FormData = {
   fullName: string;
   phoneNumber: string;
-  brokerageFirm: string;
+  brokerageFirm: string[];
   city: string;
 };
 

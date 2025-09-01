@@ -60,7 +60,7 @@ export const authOptions: NextAuthOptions = {
         return {
           ...token,
           id: user.id,
-          role: user.role,
+          role: (user as { role?: string }).role,
         };
       }
       return token;

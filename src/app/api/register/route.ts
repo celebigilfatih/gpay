@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { message: "Geçersiz giriş verileri", errors: error.errors },
+        { message: "Geçersiz giriş verileri", errors: error.issues },
         { status: 400 }
       );
     }

@@ -16,7 +16,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 type Client = {
   id: string;
   fullName: string;
-  brokerageFirm: string;
 };
 
 type Broker = {
@@ -44,12 +43,12 @@ type Stock = {
 const transactionSchema = z.object({
   stockId: z.string().min(1, "Hisse seçimi zorunludur"),
   type: z.enum(["BUY", "SELL"], {
-    required_error: "İşlem tipi seçimi zorunludur",
+    message: "İşlem tipi seçimi zorunludur",
   }),
   lots: z.coerce.number().positive("Lot sayısı pozitif bir sayı olmalıdır"),
   price: z.coerce.number().positive("Fiyat pozitif bir sayı olmalıdır"),
   date: z.string().min(1, "Tarih seçimi zorunludur"),
-  brokerageFirm: z.string().min(1, "Aracı kurum seçimi zorunludur"),
+  brokerId: z.string().min(1, "Broker seçimi zorunludur"),
   buyTransactionId: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -69,14 +68,14 @@ export default function NewTransactionPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const form = useForm<TransactionFormValues>({
+  const form = useForm({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
       type: "BUY",
       lots: undefined,
       price: undefined,
       date: new Date().toISOString().split("T")[0],
-      brokerageFirm: "",
+      brokerId: "",
       buyTransactionId: "",
       notes: "",
     },
@@ -258,18 +257,18 @@ export default function NewTransactionPage() {
 
                 <FormField
                   control={form.control}
-                  name="brokerageFirm"
+                  name="brokerId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Aracı Kurum</FormLabel>
+                      <FormLabel>Broker</FormLabel>
                       <FormControl>
                         <select
                           {...field}
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <option value="">Aracı kurum seçiniz</option>
+                          <option value="">Broker seçiniz</option>
                           {brokers.map((broker) => (
-                            <option key={broker.id} value={broker.name}>
+                            <option key={broker.id} value={broker.id}>
                               {broker.name}
                             </option>
                           ))}
@@ -315,14 +314,16 @@ export default function NewTransactionPage() {
                         <FormLabel>Lot</FormLabel>
                         <FormControl>
                           <Input
-                            type="number"
-                            step="1"
-                            placeholder="Lot sayısı giriniz"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value) || undefined)
-                            }
-                          />
+                             type="number"
+                             placeholder="Lot sayısı giriniz"
+                             value={field.value?.toString() || ""}
+                             onChange={(e) =>
+                               field.onChange(parseInt(e.target.value) || undefined)
+                             }
+                             onBlur={field.onBlur}
+                             name={field.name}
+                             ref={field.ref}
+                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -336,7 +337,16 @@ export default function NewTransactionPage() {
                       <FormItem>
                         <FormLabel>Fiyat (₺)</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="Fiyat" {...field} />
+                          <Input
+                             type="number"
+                             step="0.01"
+                             placeholder="Fiyat"
+                             value={field.value?.toString() || ""}
+                             onChange={field.onChange}
+                             onBlur={field.onBlur}
+                             name={field.name}
+                             ref={field.ref}
+                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -32,10 +31,14 @@ type Broker = {
 const brokerSchema = z.object({
   name: z.string().min(1, "Aracı kurum adı zorunludur"),
   code: z.string().min(1, "Aracı kurum kodu zorunludur"),
-  isActive: z.boolean().optional().default(true),
+  isActive: z.boolean().default(true),
 });
 
-type BrokerFormValues = z.infer<typeof brokerSchema>;
+type BrokerFormValues = {
+  name: string;
+  code: string;
+  isActive: boolean;
+};
 
 export default function BrokersPage() {
   const [brokers, setBrokers] = useState<Broker[]>([]);
@@ -47,7 +50,7 @@ export default function BrokersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const addForm = useForm<BrokerFormValues>({
+  const addForm = useForm({
     resolver: zodResolver(brokerSchema),
     defaultValues: {
       name: "",
@@ -56,7 +59,7 @@ export default function BrokersPage() {
     },
   });
 
-  const editForm = useForm<BrokerFormValues>({
+  const editForm = useForm({
     resolver: zodResolver(brokerSchema),
   });
 
@@ -184,12 +187,17 @@ export default function BrokersPage() {
   return (
     <div>
       <Navbar />
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Aracı Kurum Yönetimi</h1>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <div className="container mx-auto px-4 py-8">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
+            <div className="mb-4 md:mb-0">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Aracı Kurum Yönetimi</h1>
+              <p className="text-gray-600">Menkul değerler şirketlerini yönetin ve takip edin</p>
+            </div>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full md:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Yeni Aracı Kurum
               </Button>
@@ -260,6 +268,58 @@ export default function BrokersPage() {
               </Form>
             </DialogContent>
           </Dialog>
+          </div>
+          
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Toplam Aracı Kurum</p>
+                    <p className="text-2xl font-bold text-gray-900">{brokers.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Aktif Aracı Kurum</p>
+                    <p className="text-2xl font-bold text-gray-900">{brokers.filter(b => b.isActive).length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Toplam İşlem</p>
+                    <p className="text-2xl font-bold text-gray-900">{brokers.reduce((sum, b) => sum + b._count.transactions, 0)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <Card>

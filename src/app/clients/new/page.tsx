@@ -173,7 +173,6 @@ const citiesList = [
 type FormData = {
   fullName: string;
   phoneNumber: string;
-  brokerageFirm: string;
   city: string;
 };
 
@@ -204,7 +203,7 @@ export default function NewClientPage() {
       // Seçilen aracı kurumları virgülle ayrılmış string olarak gönder
       const brokerageFirm = selectedBrokers.length > 0 
         ? selectedBrokers.map(id => brokersList.find(b => b.value === id)?.label).join(", ")
-        : data.brokerageFirm;
+        : "";
       
       // Seçilen şehirleri virgülle ayrılmış string olarak gönder
       const city = selectedCities.length > 0
@@ -229,8 +228,8 @@ export default function NewClientPage() {
       }
 
       router.push("/clients");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsSubmitting(false);
     }
@@ -287,11 +286,7 @@ export default function NewClientPage() {
                   searchPlaceholder="Aracı kurum ara..."
                   emptyMessage="Aracı kurum bulunamadı."
                 />
-                {errors.brokerageFirm && (
-                  <p className="text-red-500 text-sm">
-                    {errors.brokerageFirm.message}
-                  </p>
-                )}
+
               </div>
 
               <div className="space-y-2">

@@ -9,7 +9,7 @@ export function Navbar() {
 
   return (
     <nav className="border-b bg-background">
-      <div className="container flex h-16 items-center justify-between">
+      <div className="container mx-auto px-4 flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-xl font-bold">
             GPay

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { TransactionType } from "@prisma/client";
 
 // GET all transactions
 export async function GET(request: NextRequest) {
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type");
 
   try {
-    const whereClause: any = {};
+    const whereClause: { clientId?: string | { in: string[] }; type?: TransactionType } = {};
     
     if (clientId) {
       // First check if the client belongs to the current user
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      if (!client || client.userId !== session.user.id) {
+      if (!client || client.userId !== (session.user.id as string)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
@@ -47,8 +48,8 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    if (type) {
-      whereClause.type = type;
+    if (type && Object.values(TransactionType).includes(type as TransactionType)) {
+      whereClause.type = type as TransactionType;
     }
 
     const transactions = await prisma.transaction.findMany({
@@ -86,10 +87,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { clientId, stockId, type, lots, price, date, brokerageFirm, buyTransactionId, notes } = await request.json();
+    const { clientId, stockId, type, lots, price, date, brokerId, buyTransactionId, notes } = await request.json();
 
     // Validate required fields
-    if (!clientId || !stockId || !type || !lots || !price || !date || !brokerageFirm) {
+    if (!clientId || !stockId || !type || !lots || !price || !date || !brokerId) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!client || client.userId !== session.user.id) {
+    if (!client || client.userId !== (session.user.id as string)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
         lots,
         price,
         date: new Date(date),
-        brokerageFirm,
+        brokerId,
         notes,
         profit,
         commission,

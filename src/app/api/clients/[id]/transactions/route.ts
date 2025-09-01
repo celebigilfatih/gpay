@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { TransactionType } from "@prisma/client";
 
 // GET transactions for a specific client
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
 
@@ -16,7 +17,8 @@ export async function GET(
 
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
-  const clientId = params.id;
+  const { id } = await params;
+  const clientId = id;
 
   try {
     // Check if the client belongs to the current user
@@ -26,16 +28,16 @@ export async function GET(
       },
     });
 
-    if (!client || client.userId !== session.user.id) {
+    if (!client || client.userId !== (session.user.id as string)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const whereClause: any = {
+    const whereClause: { clientId: string; type?: TransactionType } = {
       clientId: clientId,
     };
 
-    if (type) {
-      whereClause.type = type;
+    if (type && Object.values(TransactionType).includes(type as TransactionType)) {
+      whereClause.type = type as TransactionType;
     }
 
     const transactions = await prisma.transaction.findMany({
