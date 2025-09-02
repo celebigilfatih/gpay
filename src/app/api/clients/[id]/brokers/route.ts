@@ -48,6 +48,7 @@ export async function GET(
 
     // Sadece broker bilgilerini döndür
     const brokers = clientBrokers.map(cb => cb.broker);
+    console.log("[CLIENT BROKERS API] Returning brokers:", brokers);
 
     return NextResponse.json(brokers);
   } catch (error) {

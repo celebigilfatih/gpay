@@ -116,16 +116,17 @@ export default function NewTransactionPage() {
       const stocksData = await stocksResponse.json();
       setStocks(stocksData);
 
-      // Fetch brokers - müşteriye kayıtlı olanlar
-      console.log("[CLIENT] Fetching client brokers...");
-      const brokersResponse = await fetch(`/api/clients/${clientId}/brokers`, {
+      // Fetch all brokers instead of just client-specific ones
+      console.log("[CLIENT] Fetching all brokers...");
+      const brokersResponse = await fetch(`/api/brokers`, {
         credentials: 'include'
       });
       if (brokersResponse.ok) {
         const brokersData = await brokersResponse.json();
+        console.log("[CLIENT] Brokers data received:", brokersData);
         setBrokers(brokersData);
       } else {
-        console.error("Failed to fetch client brokers:", brokersResponse.status);
+        console.error("Failed to fetch brokers:", brokersResponse.status);
         setBrokers([]);
       }
 

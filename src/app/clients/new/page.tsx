@@ -196,7 +196,8 @@ export default function NewClientPage() {
         body: JSON.stringify({
           ...data,
           brokerageFirm,
-          city
+          city,
+          brokerIds: selectedBrokers
         }),
       });
 

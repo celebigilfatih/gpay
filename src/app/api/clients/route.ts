@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { fullName, phoneNumber, brokerageFirm, city } = await request.json();
+    const { fullName, phoneNumber, brokerageFirm, city, brokerIds } = await request.json();
 
     // Validate required fields
     if (!fullName || !phoneNumber || !brokerageFirm || !city) {
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create the client
     const client = await prisma.client.create({
       data: {
         fullName,
@@ -59,6 +60,30 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
       },
     });
+
+    // Create ClientBroker relationships if brokerIds are provided
+    if (brokerIds && Array.isArray(brokerIds) && brokerIds.length > 0) {
+      // Ensure all brokerIds exist in the system
+      const validBrokers = await prisma.broker.findMany({
+        where: {
+          id: {
+            in: brokerIds,
+          },
+        },
+      });
+
+      const validBrokerIds = validBrokers.map(b => b.id);
+      
+      // Create ClientBroker entries for valid brokers
+      if (validBrokerIds.length > 0) {
+        await prisma.clientBroker.createMany({
+          data: validBrokerIds.map(brokerId => ({
+            clientId: client.id,
+            brokerId: brokerId,
+          })),
+        });
+      }
+    }
 
     return NextResponse.json(client, { status: 201 });
   } catch (error) {
