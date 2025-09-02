@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/layout/navbar";
@@ -11,79 +11,16 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { MultiSelect } from "@/components/ui/multi-select";
 
-// Aracı kurum listesi
-const brokersList = [
-  { value: "a1capital", label: "A1 Capital Yatırım Menkul Değerler A.Ş." },
-  { value: "acar", label: "Acar Menkul Değerler A.Ş." },
-  { value: "ahlatci", label: "Ahlatcı Yatırım Menkul Değerler A.Ş." },
-  { value: "akyatirim", label: "Ak Yatırım Menkul Değerler A.Ş." },
-  { value: "alb", label: "ALB Yatırım Menkul Değerler A.Ş." },
-  { value: "allbatross", label: "Allbatross Yatırım Menkul Değerler A.Ş." },
-  { value: "alnus", label: "Alnus Yatırım Menkul Değerler A.Ş." },
-  { value: "alternatif", label: "Alternatif Menkul Değerler A.Ş." },
-  { value: "anadolu", label: "Anadolu Yatırım Menkul Kıymetler A.Ş." },
-  { value: "ata", label: "Ata Yatırım Menkul Kıymetler A.Ş." },
-  { value: "baskent", label: "Başkent Menkul Değerler A.Ş." },
-  { value: "bizim", label: "Bizim Menkul Değerler A.Ş." },
-  { value: "blupay", label: "Blupay Menkul Değerler A.Ş." },
-  { value: "btcturk", label: "BtcTurk Yatırım Menkul Değerler A.Ş." },
-  { value: "bulls", label: "Bulls Yatırım Menkul Değerler A.Ş." },
-  { value: "burgan", label: "Burgan Yatırım Menkul Değerler A.Ş." },
-  { value: "citi", label: "Citi Menkul Değerler A.Ş." },
-  { value: "colendi", label: "Colendi Menkul Değerler A.Ş." },
-  { value: "delta", label: "Delta Menkul Değerler A.Ş." },
-  { value: "deniz", label: "Deniz Yatırım Menkul Kıymetler A.Ş." },
-  { value: "destek", label: "Destek Yatırım Menkul Değerler A.Ş." },
-  { value: "dinamik", label: "Dinamik Yatırım Menkul Değerler A.Ş." },
-  { value: "eurofinans", label: "Euro Finans Menkul Değerler A.Ş." },
-  { value: "fiba", label: "Fiba Yatırım Menkul Değerler A.Ş." },
-  { value: "galata", label: "Galata Menkul Değerler A.Ş." },
-  { value: "garanti", label: "Garanti Yatırım Menkul Kıymetler A.Ş." },
-  { value: "gcm", label: "GCM Yatırım Menkul Değerler A.Ş." },
-  { value: "gedik", label: "Gedik Yatırım Menkul Değerler A.Ş." },
-  { value: "global", label: "Global Menkul Değerler A.Ş." },
-  { value: "halk", label: "Halk Yatırım Menkul Değerler A.Ş." },
-  { value: "hsbc", label: "HSBC Yatırım Menkul Değerler A.Ş." },
-  { value: "icbc", label: "ICBC Turkey Yatırım Menkul Değerler A.Ş." },
-  { value: "ikon", label: "Ikon Menkul Değerler A.Ş." },
-  { value: "ing", label: "ING Yatırım Menkul Değerler A.Ş." },
-  { value: "investaz", label: "Invest-AZ Yatırım Menkul Değerler A.Ş." },
-  { value: "info", label: "İnfo Yatırım Menkul Değerler A.Ş." },
-  { value: "integral", label: "İntegral Yatırım Menkul Değerler A.Ş." },
-  { value: "is", label: "İş Yatırım Menkul Değerler A.Ş." },
-  { value: "jpmorgan", label: "J.P. Morgan Menkul Değerler A.Ş." },
-  { value: "k", label: "K Menkul Kıymetler A.Ş." },
-  { value: "kuveytturk", label: "Kuveyt Türk Yatırım Menkul Değerler A.Ş." },
-  { value: "marbas", label: "Marbaş Menkul Değerler A.Ş." },
-  { value: "meksa", label: "Meksa Yatırım Menkul Değerler A.Ş." },
-  { value: "metro", label: "Metro Menkul Değerler A.Ş." },
-  { value: "midas", label: "Midas Menkul Değerler A.Ş." },
-  { value: "ncm", label: "Ncm Investment Menkul Değerler A.Ş." },
-  { value: "neta", label: "Neta Menkul Değerler A.Ş." },
-  { value: "osmanli", label: "Osmanlı Yatırım Menkul Değerler A.Ş." },
-  { value: "oyak", label: "Oyak Yatırım Menkul Değerler A.Ş." },
-  { value: "papara", label: "Papara Menkul Değerler A.Ş." },
-  { value: "pay", label: "Pay Menkul Değerler A.Ş." },
-  { value: "phillipcapital", label: "Phillipcapital Menkul Değerler A.Ş." },
-  { value: "piramit", label: "Piramit Menkul Kıymetler A.Ş." },
-  { value: "prim", label: "Prim Menkul Değerler A.Ş." },
-  { value: "qnb", label: "QNB Yatırım Menkul Değerler A.Ş." },
-  { value: "raymond", label: "Raymond James Yatırım Menkul Kıymetler A.Ş." },
-  { value: "strateji", label: "Strateji Menkul Değerler A.Ş." },
-  { value: "seker", label: "Şeker Yatırım Menkul Değerler A.Ş." },
-  { value: "tacirler", label: "Tacirler Yatırım Menkul Değerler A.Ş." },
-  { value: "teb", label: "TEB Yatırım Menkul Değerler A.Ş." },
-  { value: "tera", label: "Tera Yatırım Menkul Değerler A.Ş." },
-  { value: "tfg", label: "TFG İstanbul Menkul Değerler A.Ş." },
-  { value: "trive", label: "Trive Yatırım Menkul Değerler A.Ş." },
-  { value: "turkish", label: "Turkish Menkul Değerler A.Ş." },
-  { value: "unlu", label: "Ünlü Menkul Değerler A.Ş." },
-  { value: "vakif", label: "Vakıf Yatırım Menkul Değerler A.Ş." },
-  { value: "venbey", label: "Venbey Yatırım Menkul Değerler A.Ş." },
-  { value: "yapikredi", label: "Yapı Kredi Yatırım Menkul Değerler A.Ş." },
-  { value: "yatirim", label: "Yatırım Finansman Menkul Değerler A.Ş." },
-  { value: "ziraat", label: "Ziraat Yatırım Menkul Değerler A.Ş." },
-];
+type Broker = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+type UserBroker = {
+  id: string;
+  broker: Broker;
+};
 
 // Türkiye şehirleri listesi
 const citiesList = [
@@ -183,6 +120,8 @@ export default function NewClientPage() {
   const [error, setError] = useState("");
   const [selectedBrokers, setSelectedBrokers] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [userBrokers, setUserBrokers] = useState<UserBroker[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const {
     register,
@@ -190,9 +129,48 @@ export default function NewClientPage() {
     formState: { errors },
   } = useForm<FormData>();
 
+  // Tüm aracı kurumları getir
+  useEffect(() => {
+    const fetchBrokers = async () => {
+      if (status === "authenticated") {
+        try {
+          const response = await fetch("/api/users/brokers", {
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setUserBrokers(data);
+          } else {
+            console.error("Failed to fetch brokers");
+          }
+        } catch (error) {
+          console.error("Error fetching brokers:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchBrokers();
+  }, [status]);
+
   if (status === "unauthenticated") {
     router.push("/login");
     return null;
+  }
+
+  if (status === "loading" || loading) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <p>Yükleniyor...</p>
+        </div>
+      </div>
+    );
   }
 
   const onSubmit = async (data: FormData) => {
@@ -202,7 +180,7 @@ export default function NewClientPage() {
     try {
       // Seçilen aracı kurumları virgülle ayrılmış string olarak gönder
       const brokerageFirm = selectedBrokers.length > 0 
-        ? selectedBrokers.map(id => brokersList.find(b => b.value === id)?.label).join(", ")
+        ? selectedBrokers.map(id => userBrokers.find(ub => ub.broker.id === id)?.broker.name).join(", ")
         : "";
       
       // Seçilen şehirleri virgülle ayrılmış string olarak gönder
@@ -234,6 +212,12 @@ export default function NewClientPage() {
       setIsSubmitting(false);
     }
   };
+
+  // UserBroker verilerini MultiSelect için uygun formata çevir
+  const brokersList = userBrokers.map(ub => ({
+    value: ub.broker.id,
+    label: ub.broker.name
+  }));
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -284,9 +268,13 @@ export default function NewClientPage() {
                   onChange={setSelectedBrokers}
                   placeholder="Aracı kurum seçiniz..."
                   searchPlaceholder="Aracı kurum ara..."
-                  emptyMessage="Aracı kurum bulunamadı."
+                  emptyMessage={userBrokers.length === 0 ? "Önce aracı kurum eklemelisiniz." : "Aracı kurum bulunamadı."}
                 />
-
+                {userBrokers.length === 0 && (
+                  <p className="text-sm text-gray-500">
+                    Aracı kurum seçebilmek için önce "Aracı Kurumlarım" sayfasından aracı kurum eklemelisiniz.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

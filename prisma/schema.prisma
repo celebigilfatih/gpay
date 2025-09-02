@@ -19,7 +19,6 @@ model User {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   clients   Client[]
-  brokers   UserBroker[]
 }
 
 model Client {
@@ -33,6 +32,7 @@ model Client {
   userId        String
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions  Transaction[]
+  brokers       ClientBroker[]
 }
 
 model Stock {
@@ -52,17 +52,18 @@ model Broker {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
-  users        UserBroker[]
+  clients      ClientBroker[]
 }
 
-model UserBroker {
+model ClientBroker {
   id       String @id @default(uuid())
-  userId   String
+  clientId String
   brokerId String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
   broker   Broker @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
   
-  @@unique([userId, brokerId])
+  @@unique([clientId, brokerId])
 }
 
 model Transaction {

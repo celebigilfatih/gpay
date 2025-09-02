@@ -7,6 +7,8 @@ import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 type Client = {
@@ -55,6 +57,8 @@ export default function ClientTransactionsPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -99,6 +103,41 @@ export default function ClientTransactionsPage() {
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    try {
+      const response = await fetch(`/api/transactions/${transactionId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        if (response.status === 404) {
+          alert('İşlem bulunamadı. Sayfa yenileniyor...');
+          // Refresh the transactions list
+          await fetchTransactions();
+          setDeleteDialogOpen(false);
+          setTransactionToDelete(null);
+          return;
+        }
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Remove the transaction from local state
+      setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      setDeleteDialogOpen(false);
+      setTransactionToDelete(null);
+      
+      alert('İşlem başarıyla silindi.');
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      alert(`İşlem silinirken bir hata oluştu: ${(error as Error).message}`);
     }
   };
 
@@ -203,6 +242,7 @@ export default function ClientTransactionsPage() {
                     <TableHead>Toplam</TableHead>
                     <TableHead>Kar</TableHead>
                     <TableHead>Komisyon</TableHead>
+                    <TableHead>İşlemler</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -248,6 +288,53 @@ export default function ClientTransactionsPage() {
                         ) : (
                           "-"
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            asChild
+                          >
+                            <Link href={`/transactions/${transaction.id}/edit`}>
+                              <Pencil className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Dialog open={deleteDialogOpen && transactionToDelete === transaction.id} onOpenChange={(open) => {
+                            setDeleteDialogOpen(open);
+                            if (!open) setTransactionToDelete(null);
+                          }}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setTransactionToDelete(transaction.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>İşlemi Sil</DialogTitle>
+                                <DialogDescription>
+                                  Bu işlemi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <Button variant="outline" onClick={() => {
+                                  setDeleteDialogOpen(false);
+                                  setTransactionToDelete(null);
+                                }}>
+                                  İptal
+                                </Button>
+                                <Button variant="destructive" onClick={() => handleDeleteTransaction(transaction.id)}>
+                                  Sil
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

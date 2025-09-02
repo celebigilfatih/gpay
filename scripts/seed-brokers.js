@@ -72,7 +72,22 @@ const brokers = [
   { name: 'Venbey Yatırım Menkul Değerler A.Ş.', code: 'VENBE', isActive: true },
   { name: 'Yapı Kredi Yatırım Menkul Değerler A.Ş.', code: 'YAPIK', isActive: true },
   { name: 'Yatırım Finansman Menkul Değerler A.Ş.', code: 'YATFI', isActive: true },
-  { name: 'Ziraat Yatırım Menkul Değerler A.Ş.', code: 'ZIRAT', isActive: true }
+  { name: 'Ziraat Yatırım Menkul Değerler A.Ş.', code: 'ZIRAT', isActive: true },
+  { name: 'Akbank Yatırım Menkul Değerler A.Ş.', code: 'AKBNK', isActive: true },
+  { name: 'Finansbank Yatırım Menkul Değerler A.Ş.', code: 'FINBN', isActive: true },
+  { name: 'Türkiye İş Bankası A.Ş.', code: 'ISBKM', isActive: true },
+  { name: 'Türkiye Halk Bankası A.Ş.', code: 'HLBKM', isActive: true },
+  { name: 'Türkiye Vakıflar Bankası T.A.O.', code: 'VKFBM', isActive: true },
+  { name: 'Yapı ve Kredi Bankası A.Ş.', code: 'YKBKM', isActive: true },
+  { name: 'Türk Ekonomi Bankası A.Ş.', code: 'TEBBM', isActive: true },
+  { name: 'Anadolubank A.Ş.', code: 'ANDBM', isActive: true },
+  { name: 'Şekerbank T.A.Ş.', code: 'SKRBM', isActive: true },
+  { name: 'Alternatifbank A.Ş.', code: 'ALTBM', isActive: true },
+  { name: 'Fibabanka A.Ş.', code: 'FIBBM', isActive: true },
+  { name: 'Odeabank A.Ş.', code: 'ODEBM', isActive: true },
+  { name: 'ICBC Turkey Bank A.Ş.', code: 'ICBCM', isActive: true },
+  { name: 'Burgan Bank A.Ş.', code: 'BRGBM', isActive: true },
+  { name: 'Aktif Yatırım Bankası A.Ş.', code: 'AKTFM', isActive: true }
 ];
 
 async function seedBrokers() {

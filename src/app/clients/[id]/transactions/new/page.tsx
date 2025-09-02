@@ -99,7 +99,9 @@ export default function NewTransactionPage() {
     console.log("[CLIENT] fetchData started");
     try {
       // Fetch client details
-      const clientResponse = await fetch(`/api/clients/${clientId}`);
+      const clientResponse = await fetch(`/api/clients/${clientId}`, {
+        credentials: 'include'
+      });
       if (!clientResponse.ok) {
         throw new Error("Failed to fetch client");
       }
@@ -114,19 +116,23 @@ export default function NewTransactionPage() {
       const stocksData = await stocksResponse.json();
       setStocks(stocksData);
 
-      // Fetch brokers - sadece kullanıcıya kayıtlı olanlar
-      console.log("[CLIENT] Fetching brokers...");
-      const brokersResponse = await fetch("/api/brokers");
+      // Fetch brokers - müşteriye kayıtlı olanlar
+      console.log("[CLIENT] Fetching client brokers...");
+      const brokersResponse = await fetch(`/api/clients/${clientId}/brokers`, {
+        credentials: 'include'
+      });
       if (brokersResponse.ok) {
         const brokersData = await brokersResponse.json();
         setBrokers(brokersData);
       } else {
-        console.error("Failed to fetch brokers:", brokersResponse.status);
+        console.error("Failed to fetch client brokers:", brokersResponse.status);
         setBrokers([]);
       }
 
       // Fetch buy transactions for this client (for sell reference)
-      const buyTransactionsResponse = await fetch(`/api/clients/${clientId}/transactions?type=BUY`);
+      const buyTransactionsResponse = await fetch(`/api/clients/${clientId}/transactions?type=BUY`, {
+        credentials: 'include'
+      });
       if (!buyTransactionsResponse.ok) {
         throw new Error("Failed to fetch buy transactions");
       }
@@ -268,13 +274,13 @@ export default function NewTransactionPage() {
                   name="brokerId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Broker</FormLabel>
+                      <FormLabel>Aracı Kurum</FormLabel>
                       <FormControl>
                         <select
                           {...field}
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <option value="">Broker seçiniz</option>
+                          <option value="">Aracı kurum seçiniz</option>
                           {brokers.map((broker) => (
                             <option key={broker.id} value={broker.id}>
                               {broker.name}

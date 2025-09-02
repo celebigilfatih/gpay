@@ -18,7 +18,6 @@ export function Navbar() {
             <div className="hidden md:flex gap-4">
               <Link href="/dashboard">Gösterge Paneli</Link>
               <Link href="/clients">Müşteriler</Link>
-              <Link href="/my-brokers">Aracı Kurumlarım</Link>
               <Link href="/transactions">İşlemler</Link>
               <Link href="/stocks">Hisse Senetleri</Link>
             </div>

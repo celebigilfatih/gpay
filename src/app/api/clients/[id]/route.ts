@@ -12,8 +12,11 @@ export async function GET(
   const { id } = await params;
   const session = await getServerSession(authOptions) as Session | null;
 
-  // Test için session kontrolünü geçici olarak devre dışı bırak
-  const userId = session?.user?.id || 'c71a90ca-93ac-4add-b9d7-880f38ac0a97';
+  if (!session || !session.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = session.user.id;
 
   try {
     const client = await prisma.client.findUnique({

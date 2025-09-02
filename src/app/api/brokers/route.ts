@@ -11,42 +11,35 @@ const brokerSchema = z.object({
   isActive: z.boolean().optional().default(true),
 });
 
-// GET - Kullanıcıya kayıtlı aracı kurumları getir
+// GET - Tüm aktif aracı kurumları getir (yönetici kullanıcılar için)
 export async function GET() {
   try {
     console.log("[BROKER API] GET request received");
     const session = await getServerSession(authOptions) as Session | null;
     console.log("[BROKER API] Session:", session ? "Found" : "Not found");
     
-    // Test için session kontrolünü geçici olarak devre dışı bırak
-    const userId = session?.user?.id || 'c71a90ca-93ac-4add-b9d7-880f38ac0a97';
-    console.log("[BROKER API] Using userId:", userId);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    console.log("[BROKER API] Fetching all active brokers");
 
-    // Kullanıcıya kayıtlı aracı kurumları getir
-    const userBrokers = await prisma.userBroker.findMany({
+    // Tüm aktif aracı kurumları getir
+    const brokers = await prisma.broker.findMany({
       where: {
-        userId: userId,
+        isActive: true,
       },
       include: {
-        broker: {
-          include: {
-            _count: {
-              select: {
-                transactions: true,
-              },
-            },
+        _count: {
+          select: {
+            transactions: true,
           },
         },
       },
       orderBy: {
-        broker: {
-          name: "asc",
-        },
+        name: "asc",
       },
     });
-
-    // Sadece broker bilgilerini döndür
-    const brokers = userBrokers.map(ub => ub.broker);
 
     return NextResponse.json(brokers);
   } catch (error) {
