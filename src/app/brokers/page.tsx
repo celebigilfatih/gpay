@@ -291,7 +291,7 @@ export default function BrokersPage() {
           </div>
           
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
@@ -355,29 +355,34 @@ export default function BrokersPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
 
+          {/* Stock Based Lots - Full Width */}
+          <div className="mb-8">
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center">
+                <div className="flex items-start">
                   <div className="p-2 bg-red-100 rounded-lg">
                     <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
                   <div className="ml-4 flex-1">
-                    <p className="text-sm font-medium text-gray-600 mb-2">Hisse Bazlı Toplam Lot</p>
+                    <p className="text-lg font-medium text-gray-600 mb-4">Hisse Bazlı Toplam Lot</p>
                     <div className="text-sm">
                       {stockBasedLots.length > 0 ? (
-                        <div className="max-h-32 overflow-y-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                           {stockBasedLots.map((stock, index) => (
-                            <div key={index} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-b-0">
+                            <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
                               <span className="font-medium text-gray-700">{stock.symbol}:</span>
                               <span className="font-bold text-gray-900">{stock.totalLots.toLocaleString()} lot</span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-lg">-</span>
+                        <div className="text-center py-8 text-gray-500">
+                          <span className="text-lg">Henüz hisse verisi bulunmuyor</span>
+                        </div>
                       )}
                     </div>
                   </div>

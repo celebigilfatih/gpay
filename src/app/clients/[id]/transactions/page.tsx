@@ -228,7 +228,7 @@ export default function ClientTransactionsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Toplam İşlem</CardTitle>
@@ -253,32 +253,42 @@ export default function ClientTransactionsPage() {
               <p className="text-2xl font-bold text-blue-600">{totalCommission.toLocaleString('tr-TR')} ₺</p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Hisse Özeti - Full Width */}
+        <div className="mb-6">
           <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-4">
               <div className="flex justify-between items-center">
-                <CardTitle className="text-sm font-medium">Hisse Özeti</CardTitle>
-                <div className="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-medium">
+                <CardTitle className="text-lg font-medium">Hisse Özeti</CardTitle>
+                <div className="bg-red-500 text-white px-3 py-1 rounded-md text-sm font-medium">
                   Toplam: {stockSummaryArray.reduce((total, stock) => total + Math.abs(stock.totalLots), 0)} Lot
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3 text-sm">
-                {stockSummaryArray.map(stock => (
-                  <div key={stock.symbol} className="border-b pb-2 last:border-0">
-                    <div className="flex justify-between mb-1">
-                      <span className="font-medium">{stock.symbol}:</span>
-                      <span className="font-bold">{Math.abs(stock.totalLots)} Lot</span>
-                    </div>
-                    {stock.brokerNames.map((broker, index) => (
-                      <div key={index} className="text-xs text-gray-500 flex justify-between">
-                        <span>{broker}</span>
-                        <span>{Math.abs(stock.brokers.get(broker) || 0)} Lot</span>
+              {stockSummaryArray.length === 0 ? (
+                <p className="text-gray-500">Henüz hisse işlemi bulunmamaktadır.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {stockSummaryArray.map(stock => (
+                    <div key={stock.symbol} className="bg-gray-50 rounded-lg border p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-semibold text-gray-900">{stock.symbol}</span>
+                        <span className="font-bold text-blue-600">{Math.abs(stock.totalLots)} Lot</span>
                       </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
+                      <div className="space-y-1">
+                        {stock.brokerNames.map((broker, index) => (
+                          <div key={index} className="text-xs text-gray-600 flex justify-between">
+                            <span>{broker}</span>
+                            <span className="font-medium">{Math.abs(stock.brokers.get(broker) || 0)} Lot</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
