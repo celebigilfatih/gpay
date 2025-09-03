@@ -22,17 +22,20 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
-    console.log("[BROKER API] Fetching all active brokers");
+    console.log("[BROKER API] Fetching all brokers");
 
-    // Tüm aktif aracı kurumları getir
+    // Tüm aracı kurumları getir ve toplam lot sayılarını hesapla
     const brokers = await prisma.broker.findMany({
-      where: {
-        isActive: true,
-      },
       include: {
         _count: {
           select: {
             transactions: true,
+          },
+        },
+        transactions: {
+          select: {
+            lots: true,
+            type: true,
           },
         },
       },
@@ -41,7 +44,27 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(brokers);
+    // Her aracı kurum için toplam lot sayısını hesapla
+    const brokersWithLotCounts = brokers.map(broker => {
+      const totalLots = broker.transactions.reduce((total, transaction) => {
+        return transaction.type === 'BUY' 
+          ? total + transaction.lots 
+          : total - transaction.lots;
+      }, 0);
+
+      return {
+        id: broker.id,
+        name: broker.name,
+        code: broker.code,
+        isActive: broker.isActive,
+        createdAt: broker.createdAt,
+        updatedAt: broker.updatedAt,
+        _count: broker._count,
+        totalLots: Math.max(0, totalLots), // Negatif değerleri 0 olarak al
+      };
+    });
+
+    return NextResponse.json(brokersWithLotCounts);
   } catch (error) {
     console.error("Error fetching brokers:", error);
     return NextResponse.json(

@@ -48,7 +48,7 @@ const transactionSchema = z.object({
   lots: z.coerce.number().positive("Lot sayısı pozitif bir sayı olmalıdır"),
   price: z.coerce.number().positive("Fiyat pozitif bir sayı olmalıdır"),
   date: z.string().min(1, "Tarih seçimi zorunludur"),
-  brokerId: z.string().min(1, "Broker seçimi zorunludur"),
+  brokerId: z.string().optional(),
   buyTransactionId: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -151,13 +151,19 @@ export default function NewTransactionPage() {
     
     setSubmitting(true);
     try {
+      // Eğer satış işlemi ise ve brokerId seçilmediyse, bu alanı gönderme
+      const formData = {...data};
+      if (data.type === "SELL" && !data.brokerId) {
+        delete formData.brokerId;
+      }
+
       const response = await fetch("/api/transactions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...data,
+          ...formData,
           clientId: client.id,
         }),
       });
@@ -309,7 +315,7 @@ export default function NewTransactionPage() {
                             <option value="">Alış işlemi seçiniz (opsiyonel)</option>
                             {buyTransactions.map((buyTx) => (
                               <option key={buyTx.id} value={buyTx.id}>
-                                {buyTx.stock.symbol} - {buyTx.lots} lot - {new Date(buyTx.date).toLocaleDateString('tr-TR')} - ₺{buyTx.price}
+                                {buyTx.stock.symbol} - {buyTx.lots} lot - {new Date(buyTx.date).toLocaleDateString('tr-TR')} - ₺{buyTx.price} - {buyTx.broker?.name || ""}
                               </option>
                             ))}
                           </select>

@@ -26,6 +26,7 @@ type Broker = {
   _count: {
     transactions: number;
   };
+  totalLots: number;
 };
 
 const brokerSchema = z.object({
@@ -47,6 +48,7 @@ export default function BrokersPage() {
   const [editingBroker, setEditingBroker] = useState<Broker | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [stockBasedLots, setStockBasedLots] = useState<{ symbol: string; name: string; totalLots: number }[]>([]);
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -70,6 +72,7 @@ export default function BrokersPage() {
 
     if (status === "authenticated") {
       fetchBrokers();
+      fetchStockBasedLots();
     }
   }, [status, router]);
 
@@ -78,7 +81,12 @@ export default function BrokersPage() {
       const response = await fetch("/api/brokers");
       if (response.ok) {
         const data = await response.json();
-        setBrokers(data);
+        // Active broker'ları önce, pasif broker'ları sonra sırala
+        const sortedData = data.sort((a: Broker, b: Broker) => {
+          if (a.isActive === b.isActive) return 0;
+          return a.isActive ? -1 : 1;
+        });
+        setBrokers(sortedData);
       } else {
         console.error("Failed to fetch brokers");
       }
@@ -86,6 +94,18 @@ export default function BrokersPage() {
       console.error("Error fetching brokers:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStockBasedLots = async () => {
+    try {
+      const response = await fetch("/api/transactions/stock-summary");
+      if (response.ok) {
+        const data = await response.json();
+        setStockBasedLots(data);
+      }
+    } catch (error) {
+      console.error("Error fetching stock-based lots:", error);
     }
   };
 
@@ -271,7 +291,7 @@ export default function BrokersPage() {
           </div>
           
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
@@ -319,6 +339,51 @@ export default function BrokersPage() {
                 </div>
               </CardContent>
             </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Toplam Lot</p>
+                    <p className="text-2xl font-bold text-gray-900">{brokers.reduce((sum, b) => sum + (b.totalLots || 0), 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <p className="text-sm font-medium text-gray-600 mb-2">Hisse Bazlı Toplam Lot</p>
+                    <div className="text-sm">
+                      {stockBasedLots.length > 0 ? (
+                        <div className="max-h-32 overflow-y-auto">
+                          {stockBasedLots.map((stock, index) => (
+                            <div key={index} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-b-0">
+                              <span className="font-medium text-gray-700">{stock.symbol}:</span>
+                              <span className="font-bold text-gray-900">{stock.totalLots.toLocaleString()} lot</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-lg">-</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
@@ -339,6 +404,7 @@ export default function BrokersPage() {
                     <TableHead>Kod</TableHead>
                     <TableHead>Durum</TableHead>
                     <TableHead>İşlem Sayısı</TableHead>
+                    <TableHead>Toplam Lot</TableHead>
                     <TableHead>Oluşturulma</TableHead>
                     <TableHead className="text-right">İşlemler</TableHead>
                   </TableRow>
@@ -360,6 +426,7 @@ export default function BrokersPage() {
                         </span>
                       </TableCell>
                       <TableCell>{broker._count.transactions}</TableCell>
+                      <TableCell>{(broker.totalLots || 0).toLocaleString()}</TableCell>
                       <TableCell>
                         {new Date(broker.createdAt).toLocaleDateString("tr-TR")}
                       </TableCell>

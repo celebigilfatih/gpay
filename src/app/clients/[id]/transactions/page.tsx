@@ -174,6 +174,40 @@ export default function ClientTransactionsPage() {
   const totalCommission = transactions
     .filter(t => t.commission !== null)
     .reduce((sum, t) => sum + (t.commission || 0), 0);
+    
+  // Group transactions by stock
+  const stockSummary = transactions.reduce((acc, transaction) => {
+    const stockSymbol = transaction.stock.symbol;
+    if (!acc[stockSymbol]) {
+      acc[stockSymbol] = {
+        symbol: stockSymbol,
+        name: transaction.stock.name,
+        totalLots: 0,
+        brokers: new Map(),
+        brokerNames: []
+      };
+    }
+    
+    // Add lots (positive for BUY, negative for SELL to get net position)
+    acc[stockSymbol].totalLots += transaction.type === "BUY" ? transaction.lots : -transaction.lots;
+    
+    // Add broker if exists
+    if (transaction.broker?.name) {
+      const brokerName = transaction.broker.name;
+      if (!acc[stockSymbol].brokers.has(brokerName)) {
+        acc[stockSymbol].brokers.set(brokerName, 0);
+        acc[stockSymbol].brokerNames.push(brokerName);
+      }
+      // Increment broker's lot count
+      const currentLots = acc[stockSymbol].brokers.get(brokerName) || 0;
+      acc[stockSymbol].brokers.set(brokerName, currentLots + (transaction.type === "BUY" ? transaction.lots : -transaction.lots));
+    }
+    
+    return acc;
+  }, {} as Record<string, { symbol: string, name: string, totalLots: number, brokers: Map<string, number>, brokerNames: string[] }>);
+  
+  // Convert to array for rendering
+  const stockSummaryArray = Object.values(stockSummary);
 
   return (
     <>
@@ -194,7 +228,7 @@ export default function ClientTransactionsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Toplam İşlem</CardTitle>
@@ -217,6 +251,34 @@ export default function ClientTransactionsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-blue-600">{totalCommission.toLocaleString('tr-TR')} ₺</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-sm font-medium">Hisse Özeti</CardTitle>
+                <div className="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-medium">
+                  Toplam: {stockSummaryArray.reduce((total, stock) => total + Math.abs(stock.totalLots), 0)} Lot
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 text-sm">
+                {stockSummaryArray.map(stock => (
+                  <div key={stock.symbol} className="border-b pb-2 last:border-0">
+                    <div className="flex justify-between mb-1">
+                      <span className="font-medium">{stock.symbol}:</span>
+                      <span className="font-bold">{Math.abs(stock.totalLots)} Lot</span>
+                    </div>
+                    {stock.brokerNames.map((broker, index) => (
+                      <div key={index} className="text-xs text-gray-500 flex justify-between">
+                        <span>{broker}</span>
+                        <span>{Math.abs(stock.brokers.get(broker) || 0)} Lot</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>

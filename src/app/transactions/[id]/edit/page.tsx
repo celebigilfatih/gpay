@@ -329,7 +329,7 @@ export default function EditTransactionPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Seçim yapın</SelectItem>
+                          <SelectItem value="none">Seçim yapın</SelectItem>
                           {brokers.map((broker) => (
                             <SelectItem key={broker.id} value={broker.id}>
                               {broker.name}

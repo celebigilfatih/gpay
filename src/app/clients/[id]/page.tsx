@@ -134,6 +134,7 @@ export default function ClientDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userBrokers, setUserBrokers] = useState<UserBroker[]>([]);
+  const [allBrokers, setAllBrokers] = useState<Broker[]>([]);
   const [brokersLoading, setBrokersLoading] = useState(true);
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -148,8 +149,30 @@ export default function ClientDetailPage() {
     if (status === "authenticated") {
       fetchClient();
       fetchUserBrokers();
+      fetchAllBrokers();
     }
   }, [status, clientId, router]);
+
+  // allBrokers yüklendikten sonra form'u yeniden reset et
+  useEffect(() => {
+    if (client && allBrokers.length > 0) {
+      const brokerValues = client.brokerageFirm ? 
+        client.brokerageFirm.split(',').map((firm: string) => {
+          const trimmedFirm = firm.trim();
+          const broker = allBrokers.find(b => b.name === trimmedFirm);
+          return broker ? broker.id : null;
+        }).filter(id => id && id.trim() !== '') : [];
+      
+      const cityValue = citiesList.find(c => c.label === client.city)?.value || client.city;
+      
+      reset({
+        fullName: client.fullName,
+        phoneNumber: client.phoneNumber,
+        brokerageFirm: brokerValues,
+        city: cityValue
+      });
+    }
+  }, [client, allBrokers, reset]);
 
   const fetchUserBrokers = async () => {
     try {
@@ -171,6 +194,24 @@ export default function ClientDetailPage() {
     }
   };
 
+  const fetchAllBrokers = async () => {
+    try {
+      const response = await fetch('/api/brokers', {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch all brokers');
+      }
+      const data = await response.json();
+      setAllBrokers(data);
+    } catch (error) {
+      console.error('Error fetching all brokers:', error);
+    }
+  };
+
   const fetchClient = async () => {
     try {
       const response = await fetch(`/api/clients/${clientId}`, {
@@ -184,22 +225,6 @@ export default function ClientDetailPage() {
       }
       const clientData = await response.json();
       setClient(clientData);
-      
-      // Dropdown'lar için value'ları bul
-      const brokerValues = clientData.brokerageFirm ? 
-        clientData.brokerageFirm.split(',').map((firm: string) => {
-          const trimmedFirm = firm.trim();
-          const userBroker = userBrokers.find(ub => ub.broker.name === trimmedFirm);
-          return userBroker ? userBroker.broker.id : trimmedFirm;
-        }) : [];
-      const cityValue = citiesList.find(c => c.label === clientData.city)?.value || clientData.city;
-      
-      reset({
-        fullName: clientData.fullName,
-        phoneNumber: clientData.phoneNumber,
-        brokerageFirm: brokerValues,
-        city: cityValue
-      });
     } catch (error) {
       console.error("Error fetching client:", error);
     } finally {
@@ -213,8 +238,8 @@ export default function ClientDetailPage() {
       // Value'ları label'lara dönüştür
       const brokerLabels = Array.isArray(data.brokerageFirm) ? 
         data.brokerageFirm.map(brokerId => {
-          const userBroker = userBrokers.find(ub => ub.broker.id === brokerId);
-          return userBroker ? userBroker.broker.name : brokerId;
+          const broker = allBrokers.find(b => b.id === brokerId);
+          return broker ? broker.name : brokerId;
         }).join(', ') :
         data.brokerageFirm;
       const cityLabel = citiesList.find(c => c.value === data.city)?.label || data.city;
@@ -256,9 +281,9 @@ export default function ClientDetailPage() {
       const brokerValues = client.brokerageFirm ? 
         client.brokerageFirm.split(',').map((firm: string) => {
           const trimmedFirm = firm.trim();
-          const userBroker = userBrokers.find(ub => ub.broker.name === trimmedFirm);
-          return userBroker ? userBroker.broker.id : trimmedFirm;
-        }) : [];
+          const broker = allBrokers.find(b => b.name === trimmedFirm);
+          return broker ? broker.id : null;
+        }).filter(id => id && id.trim() !== '') : [];
       const cityValue = citiesList.find(c => c.label === client.city)?.value || client.city;
       
       reset({
@@ -299,6 +324,7 @@ export default function ClientDetailPage() {
     <>
       <Navbar />
       <div className="container mx-auto px-4 py-10">
+
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold">{client.fullName}</h1>
@@ -389,25 +415,31 @@ export default function ClientDetailPage() {
                     name="brokerageFirm"
                     control={control}
                     rules={{ required: "Aracı kurum gereklidir" }}
-                    render={({ field }) => (
-                      <>
-                        {userBrokers.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            Bu müşteri için henüz aracı kurum seçilmemiş.
-                          </p>
-                        ) : (
-                          <MultiSelect
-                            options={userBrokers.map(ub => ({
-                              value: ub.broker.id,
-                              label: ub.broker.name
-                            }))}
-                            selected={field.value || []}
-                            onChange={field.onChange}
-                            placeholder="Aracı kurum seçiniz..."
-                          />
-                        )}
-                      </>
-                    )}
+                    render={({ field }) => {
+                       const options = allBrokers.map(broker => ({
+                         value: broker.id,
+                         label: broker.name
+                       })).filter(option => option.value && option.label);
+                       
+
+                       
+                       return (
+                         <>
+                           {options.length === 0 ? (
+                             <p className="text-sm text-muted-foreground">
+                               Henüz aracı kurum bulunmuyor.
+                             </p>
+                           ) : (
+                             <MultiSelect
+                               options={options}
+                               selected={field.value || []}
+                               onChange={field.onChange}
+                               placeholder="Aracı kurum seçiniz..."
+                             />
+                           )}
+                         </>
+                       );
+                     }}
                   />
                   {errors.brokerageFirm && (
                     <p className="text-sm text-red-500 mt-1">{errors.brokerageFirm.message}</p>

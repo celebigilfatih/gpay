@@ -91,9 +91,17 @@ export async function POST(request: NextRequest) {
     const { clientId, stockId, type, lots, price, date, brokerId, buyTransactionId, notes } = await request.json();
 
     // Validate required fields
-    if (!clientId || !stockId || !type || !lots || !price || !date || !brokerId) {
+    if (!clientId || !stockId || !type || !lots || !price || !date) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // Broker ID is required only for BUY transactions
+    if (type === "BUY" && !brokerId) {
+      return NextResponse.json(
+        { error: "Aracı kurum seçimi zorunludur" },
         { status: 400 }
       );
     }
@@ -178,11 +186,13 @@ export async function POST(request: NextRequest) {
             id: stockId,
           },
         },
-        broker: {
-          connect: {
-            id: brokerId,
+        ...(brokerId && {
+          broker: {
+            connect: {
+              id: brokerId,
+            },
           },
-        },
+        }),
         ...(buyTransactionId && {
           buyTransaction: {
             connect: {
