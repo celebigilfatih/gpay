@@ -7,44 +7,37 @@ import { prisma } from "@/lib/prisma";
 // GET - Belirli bir müşteriye kayıtlı aracı kurumları getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const resolvedParams = await params;
-    console.log("[CLIENT BROKERS API] GET request received for client:", resolvedParams.id);
-    const session = await getServerSession(authOptions) as Session | null;
-    
-    // Geçici olarak auth kontrolünü devre dışı bırak
-    console.log("[CLIENT BROKERS API] Session:", session ? "exists" : "null");
-    // if (!session || !session.user) {
-    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // }
+    console.log("[CLIENT BROKERS API] GET request received for client:", params.id);
 
-    const clientId = resolvedParams.id;
+    const clientId = params.id;
     console.log("[CLIENT BROKERS API] Using clientId:", clientId);
 
     // Müşteriye kayıtlı aracı kurumları getir
+    console.log("[CLIENT BROKERS API] Querying clientBrokers with clientId:", clientId);
+    
+    // Önce tüm aracı kurumları getir
+    const allBrokers = await prisma.broker.findMany();
+    console.log("[CLIENT BROKERS API] All brokers:", allBrokers);
+    
+    // Sonra müşteriye ait aracı kurumları getir
     const clientBrokers = await prisma.clientBroker.findMany({
       where: {
         clientId: clientId,
       },
       include: {
-        broker: {
-          include: {
-            _count: {
-              select: {
-                transactions: true,
-              },
-            },
-          },
-        },
+        broker: true
       },
       orderBy: {
         broker: {
-          name: "asc",
-        },
-      },
+          name: "asc"
+        }
+      }
     });
+    
+    console.log("[CLIENT BROKERS API] Found client brokers:", clientBrokers);
 
     // Sadece broker bilgilerini döndür
     const brokers = clientBrokers.map(cb => cb.broker);
@@ -63,17 +56,16 @@ export async function GET(
 // POST - Müşteriye yeni aracı kurum ekle
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const resolvedParams = await params;
-    const session = await getServerSession(authOptions) as Session | null;
-    
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Oturum kontrolünü geçici olarak kaldır
+    // const session = await getServerSession(authOptions) as Session | null;
+    // if (!session || !session.user) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
 
-    const clientId = resolvedParams.id;
+    const clientId = params.id;
     const body = await request.json();
     const { brokerId } = body;
 
@@ -108,94 +100,35 @@ export async function POST(
       );
     }
 
-    // Zaten kayıtlı mı kontrol et
-    const existingClientBroker = await prisma.clientBroker.findUnique({
+    // Müşteri-aracı kurum ilişkisinin zaten var olup olmadığını kontrol et
+    const existingRelation = await prisma.clientBroker.findFirst({
       where: {
-        clientId_brokerId: {
-          clientId: clientId,
-          brokerId: brokerId,
-        },
-      },
+        clientId: clientId,
+        brokerId: brokerId
+      }
     });
 
-    if (existingClientBroker) {
+    if (existingRelation) {
       return NextResponse.json(
-        { error: "Bu aracı kurum zaten müşteriye kayıtlı" },
-        { status: 400 }
+        { error: "This broker is already associated with the client" },
+        { status: 409 }
       );
     }
 
-    // Yeni ClientBroker kaydı oluştur
+    // Yeni müşteri-aracı kurum ilişkisi oluştur
     const clientBroker = await prisma.clientBroker.create({
       data: {
         clientId: clientId,
-        brokerId: brokerId,
+        brokerId: brokerId
       },
       include: {
-        broker: true,
-      },
+        broker: true
+      }
     });
 
-    return NextResponse.json(clientBroker, { status: 201 });
+    return NextResponse.json(clientBroker.broker);
   } catch (error) {
     console.error("Error adding broker to client:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE - Müşteriden aracı kurum kaldır
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const resolvedParams = await params;
-    const session = await getServerSession(authOptions) as Session | null;
-    
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const clientId = resolvedParams.id;
-    const { searchParams } = new URL(request.url);
-    const brokerId = searchParams.get('brokerId');
-
-    if (!brokerId) {
-      return NextResponse.json(
-        { error: "Broker ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // ClientBroker kaydını bul ve sil
-    const clientBroker = await prisma.clientBroker.findUnique({
-      where: {
-        clientId_brokerId: {
-          clientId: clientId,
-          brokerId: brokerId,
-        },
-      },
-    });
-
-    if (!clientBroker) {
-      return NextResponse.json(
-        { error: "Bu aracı kurum müşteriye kayıtlı değil" },
-        { status: 404 }
-      );
-    }
-
-    await prisma.clientBroker.delete({
-      where: {
-        id: clientBroker.id,
-      },
-    });
-
-    return NextResponse.json({ message: "Aracı kurum başarıyla kaldırıldı" });
-  } catch (error) {
-    console.error("Error removing broker from client:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -16,10 +16,11 @@ export function Navbar() {
           </Link>
           {session && (
             <div className="hidden md:flex gap-4">
-              <Link href="/dashboard">Gösterge Paneli</Link>
+              <Link href="/dashboard">Dashboard</Link>
               <Link href="/clients">Müşteriler</Link>
               <Link href="/transactions">İşlemler</Link>
               <Link href="/stocks">Hisse Senetleri</Link>
+              <Link href="/brokers">Aracı Kurumlar</Link>
             </div>
           )}
         </div>
