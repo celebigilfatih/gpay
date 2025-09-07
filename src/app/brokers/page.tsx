@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 
 type Broker = {
@@ -41,6 +41,9 @@ type BrokerFormValues = {
   isActive: boolean;
 };
 
+type SortField = 'name' | 'code' | 'isActive' | 'transactions' | 'totalLots' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
+
 export default function BrokersPage() {
   const [brokers, setBrokers] = useState<Broker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +51,8 @@ export default function BrokersPage() {
   const [editingBroker, setEditingBroker] = useState<Broker | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('totalLots');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [stockBasedLots, setStockBasedLots] = useState<{ symbol: string; name: string; totalLots: number }[]>([]);
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -81,12 +86,7 @@ export default function BrokersPage() {
       const response = await fetch("/api/brokers");
       if (response.ok) {
         const data = await response.json();
-        // Active broker'ları önce, pasif broker'ları sonra sırala
-        const sortedData = data.sort((a: Broker, b: Broker) => {
-          if (a.isActive === b.isActive) return 0;
-          return a.isActive ? -1 : 1;
-        });
-        setBrokers(sortedData);
+        setBrokers(data);
       } else {
         console.error("Failed to fetch brokers");
       }
@@ -95,6 +95,80 @@ export default function BrokersPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const sortedBrokers = [...brokers].sort((a, b) => {
+    let aValue: any;
+    let bValue: any;
+
+    switch (sortField) {
+      case 'name':
+        aValue = a.name.toLowerCase();
+        bValue = b.name.toLowerCase();
+        break;
+      case 'code':
+        aValue = a.code.toLowerCase();
+        bValue = b.code.toLowerCase();
+        break;
+      case 'isActive':
+        aValue = a.isActive ? 1 : 0;
+        bValue = b.isActive ? 1 : 0;
+        break;
+      case 'transactions':
+        aValue = a._count.transactions;
+        bValue = b._count.transactions;
+        break;
+      case 'totalLots':
+        aValue = a.totalLots || 0;
+        bValue = b.totalLots || 0;
+        break;
+      case 'createdAt':
+        aValue = new Date(a.createdAt).getTime();
+        bValue = new Date(b.createdAt).getTime();
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) {
+      return sortDirection === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortDirection === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => {
+    const isActive = sortField === field;
+    return (
+      <TableHead 
+        className="cursor-pointer hover:bg-gray-50 select-none"
+        onClick={() => handleSort(field)}
+      >
+        <div className="flex items-center gap-1">
+          {children}
+          {isActive ? (
+            sortDirection === 'asc' ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )
+          ) : (
+            <div className="h-4 w-4" />
+          )}
+        </div>
+      </TableHead>
+    );
   };
 
   const fetchStockBasedLots = async () => {
@@ -405,17 +479,17 @@ export default function BrokersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Aracı Kurum Adı</TableHead>
-                    <TableHead>Kod</TableHead>
-                    <TableHead>Durum</TableHead>
-                    <TableHead>İşlem Sayısı</TableHead>
-                    <TableHead>Toplam Lot</TableHead>
-                    <TableHead>Oluşturulma</TableHead>
+                    <SortableHeader field="name">Aracı Kurum Adı</SortableHeader>
+                    <SortableHeader field="code">Kod</SortableHeader>
+                    <SortableHeader field="isActive">Durum</SortableHeader>
+                    <SortableHeader field="transactions">İşlem Sayısı</SortableHeader>
+                    <SortableHeader field="totalLots">Toplam Lot</SortableHeader>
+                    <SortableHeader field="createdAt">Oluşturulma</SortableHeader>
                     <TableHead className="text-right">İşlemler</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {brokers.map((broker) => (
+                  {sortedBrokers.map((broker) => (
                     <TableRow key={broker.id}>
                       <TableCell className="font-medium">{broker.name}</TableCell>
                       <TableCell>{broker.code}</TableCell>
