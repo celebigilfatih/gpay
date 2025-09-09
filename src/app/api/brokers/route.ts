@@ -11,16 +11,11 @@ const brokerSchema = z.object({
   isActive: z.boolean().optional().default(true),
 });
 
-// GET - Tüm aktif aracı kurumları getir (yönetici kullanıcılar için)
+// GET - Tüm aktif aracı kurumları getir (global access)
 export async function GET() {
   try {
     console.log("[BROKER API] GET request received");
-    const session = await getServerSession(authOptions) as Session | null;
-    console.log("[BROKER API] Session:", session ? "Found" : "Not found");
-    
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Global access - no authentication required
     
     console.log("[BROKER API] Fetching all brokers");
 
@@ -77,10 +72,7 @@ export async function GET() {
 // POST - Yeni aracı kurum ekle
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions) as Session | null;
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Global access - no authentication required
 
     const body = await request.json();
     const validatedData = brokerSchema.parse(body);

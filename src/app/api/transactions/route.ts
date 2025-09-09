@@ -5,12 +5,9 @@ import { authOptions } from "../auth/[...nextauth]/options";
 import type { Session } from "next-auth";
 import { TransactionType } from "@prisma/client";
 
-// GET all transactions
+// GET all transactions (global access)
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions) as Session | null;
-   if (!session || !session.user) {
-     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-   }
+  // Global access - no authentication required
 
   const { searchParams } = new URL(request.url);
   const clientId = searchParams.get("clientId");
@@ -20,33 +17,10 @@ export async function GET(request: NextRequest) {
     const whereClause: { clientId?: string | { in: string[] }; type?: TransactionType } = {};
     
     if (clientId) {
-      // First check if the client belongs to the current user
-      const client = await prisma.client.findUnique({
-        where: {
-          id: clientId,
-        },
-      });
-
-      if (!client || client.userId !== session.user.id) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-
+      // Global access - no ownership check required
       whereClause.clientId = clientId;
-    } else {
-      // If no clientId is provided, get all transactions for clients belonging to the user
-      const userClients = await prisma.client.findMany({
-        where: {
-          userId: session.user.id as string,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      whereClause.clientId = {
-        in: userClients.map((client) => client.id),
-      };
     }
+    // If no clientId is provided, get all transactions (global access)
 
     if (type && Object.values(TransactionType).includes(type as TransactionType)) {
       whereClause.type = type as TransactionType;
@@ -81,19 +55,35 @@ export async function GET(request: NextRequest) {
 
 // POST create a new transaction
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions) as Session | null;
-
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // Global access - no authentication required
 
   try {
-    const { clientId, stockId, type, lots, price, date, brokerId, buyTransactionId, notes } = await request.json();
+    const body = await request.json();
+    console.log('Received transaction data:', body);
+    const { clientId, stockId, type, lots, price, date, brokerId, buyTransactionId, notes } = body;
 
     // Validate required fields
-    if (!clientId || !stockId || !type || !lots || !price || !date) {
+    if (!clientId || !stockId || !type || lots === undefined || lots === null || price === undefined || price === null || !date) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // Convert and validate numeric fields
+    const lotsNum = Number(lots);
+    const priceNum = Number(price);
+    
+    if (isNaN(lotsNum) || lotsNum <= 0) {
+      return NextResponse.json(
+        { error: "Lot sayısı pozitif bir sayı olmalıdır" },
+        { status: 400 }
+      );
+    }
+    
+    if (isNaN(priceNum) || priceNum <= 0) {
+      return NextResponse.json(
+        { error: "Fiyat pozitif bir sayı olmalıdır" },
         { status: 400 }
       );
     }
@@ -106,16 +96,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if the client belongs to the current user
-    const client = await prisma.client.findUnique({
-      where: {
-        id: clientId,
-      },
-    });
-
-    if (!client || client.userId !== session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Global access - no client ownership check required
 
     // Check if the stock exists
     const stock = await prisma.stock.findUnique({
@@ -158,7 +139,7 @@ export async function POST(request: NextRequest) {
 
       if (buyTransaction) {
         // Calculate profit: (sell price - buy price) * lots
-        profit = (price - buyTransaction.price) * lots;
+        profit = (priceNum - buyTransaction.price) * lotsNum;
         
         // Calculate commission: 30% of profit (only if profit is positive)
         if (profit > 0) {
@@ -170,8 +151,8 @@ export async function POST(request: NextRequest) {
     const transaction = await prisma.transaction.create({
       data: {
         type,
-        lots,
-        price,
+        lots: lotsNum,
+        price: priceNum,
         date: new Date(date),
         notes,
         profit,

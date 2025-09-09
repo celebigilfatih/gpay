@@ -5,15 +5,12 @@ import { authOptions } from "../../../auth/[...nextauth]/options";
 import type { Session } from "next-auth";
 import { TransactionType } from "@prisma/client";
 
-// GET transactions for a specific client
+// GET transactions for a specific client (global access)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions) as Session | null;
-   if (!session || !session.user) {
-     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-   }
+  // Global access - no authentication required
 
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
@@ -21,16 +18,7 @@ export async function GET(
   const clientId = id;
 
   try {
-    // Check if the client belongs to the current user
-    const client = await prisma.client.findUnique({
-      where: {
-        id: clientId,
-      },
-    });
-
-    if (!client || client.userId !== (session.user.id as string)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Global access - no ownership check required
 
     const whereClause: { clientId: string; type?: TransactionType } = {
       clientId: clientId,

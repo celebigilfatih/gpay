@@ -12,13 +12,7 @@ export async function GET(
   const { id } = await params;
   const session = await getServerSession(authOptions) as Session | null;
 
-  // Test için auth kontrolünü devre dışı bırak
-  console.log("[CLIENT API] Session check:", session ? "exists" : "null");
-  // if (!session || !session.user) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
-
-  const userId = session?.user?.id || "c71a90ca-93ac-4add-b9d7-880f38ac0a97"; // Test için geçici
+  // Global access - no authentication required
 
   try {
     const client = await prisma.client.findUnique({
@@ -41,10 +35,7 @@ export async function GET(
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    // Check if the client belongs to the logged-in user
-    if (client.userId !== userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Global access - no ownership check required
 
     return NextResponse.json(client);
   } catch (error) {

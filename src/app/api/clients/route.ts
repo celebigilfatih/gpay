@@ -4,18 +4,10 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/options";
 import type { Session } from "next-auth";
 
-// GET all clients for the logged-in user
+// GET all clients (global access)
 export async function GET(_request: NextRequest) {
-  const session = await getServerSession(authOptions) as Session | null;
-   if (!session || !session.user) {
-     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-   }
-
   try {
     const clients = await prisma.client.findMany({
-      where: {
-        userId: session.user.id,
-      },
       orderBy: {
         fullName: "asc",
       },

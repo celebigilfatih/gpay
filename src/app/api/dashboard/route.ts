@@ -6,36 +6,17 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(_request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions) as Session | null;
-
-     if (!session || !session.user) {
-       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-     }
-
-    const userId = session.user.id as string;
+    // Global access - no authentication required
 
     // Get total clients
-    const totalClients = await prisma.client.count({
-      where: {
-        userId: userId,
-      },
-    });
+    const totalClients = await prisma.client.count();
 
     // Get total transactions
-    const totalTransactions = await prisma.transaction.count({
-      where: {
-        client: {
-          userId: userId,
-        },
-      },
-    });
+    const totalTransactions = await prisma.transaction.count();
 
     // Get total profit and commission
     const profitAndCommission = await prisma.transaction.aggregate({
       where: {
-        client: {
-          userId: userId,
-        },
         profit: {
           not: null,
         },
@@ -51,11 +32,6 @@ export async function GET(_request: NextRequest) {
 
     // Get recent transactions
     const recentTransactions = await prisma.transaction.findMany({
-      where: {
-        client: {
-          userId: userId,
-        },
-      },
       select: {
         id: true,
         type: true,
@@ -85,7 +61,6 @@ export async function GET(_request: NextRequest) {
     // Get top clients by commission
     const topClients = await prisma.client.findMany({
       where: {
-        userId: userId,
         transactions: {
           some: {},
         },

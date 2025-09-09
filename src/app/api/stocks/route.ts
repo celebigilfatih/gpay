@@ -6,11 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(_request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions) as Session | null;
-
-     if (!session || !session.user) {
-       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-     }
+    // Global access - no authentication required
 
     const stocks = await prisma.stock.findMany({
       orderBy: {
@@ -30,11 +26,7 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions) as Session | null;
-
-    if (!session || !session.user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    // Global access - no authentication required
 
     const { symbol, name } = await request.json();
 

@@ -54,6 +54,7 @@ export default function BrokersPage() {
   const [sortField, setSortField] = useState<SortField>('totalLots');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [stockBasedLots, setStockBasedLots] = useState<{ symbol: string; name: string; totalLots: number }[]>([]);
+  const [brokerBasedLots, setBrokerBasedLots] = useState<{ name: string; code: string; totalLots: number; stocks: any }[]>([]);
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -78,6 +79,7 @@ export default function BrokersPage() {
     if (status === "authenticated") {
       fetchBrokers();
       fetchStockBasedLots();
+      fetchBrokerBasedLots();
     }
   }, [status, router]);
 
@@ -107,8 +109,8 @@ export default function BrokersPage() {
   };
 
   const sortedBrokers = [...brokers].sort((a, b) => {
-    let aValue: any;
-    let bValue: any;
+    let aValue: string | number | Date;
+    let bValue: string | number | Date;
 
     switch (sortField) {
       case 'name':
@@ -180,6 +182,18 @@ export default function BrokersPage() {
       }
     } catch (error) {
       console.error("Error fetching stock-based lots:", error);
+    }
+  };
+
+  const fetchBrokerBasedLots = async () => {
+    try {
+      const response = await fetch("/api/transactions/broker-summary");
+      if (response.ok) {
+        const data = await response.json();
+        setBrokerBasedLots(data);
+      }
+    } catch (error) {
+      console.error("Error fetching broker-based lots:", error);
     }
   };
 
@@ -456,6 +470,52 @@ export default function BrokersPage() {
                       ) : (
                         <div className="text-center py-8 text-gray-500">
                           <span className="text-lg">Henüz hisse verisi bulunmuyor</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+
+          {/* Broker-Stock Based Lots - Full Width */}
+          <div className="mb-8">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-start">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 00-2-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <p className="text-sm font-medium text-gray-600">Aracı Kurumlardaki Hisse Bazlı Toplam Lot</p>
+                    <div className="text-sm mt-4">
+                      {brokerBasedLots.length > 0 ? (
+                        <div className="space-y-6">
+                          {brokerBasedLots.map((broker, brokerIndex) => (
+                            <div key={brokerIndex} className="border rounded-lg p-4 bg-gray-50">
+                              <h4 className="font-semibold text-gray-800 mb-3">{broker.name}</h4>
+                              {Object.keys(broker.stocks).length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                  {Object.entries(broker.stocks).map(([stockSymbol, stockData]) => (
+                                    <div key={stockSymbol} className="flex justify-between items-center p-2 bg-white rounded border">
+                                      <span className="font-medium text-gray-700">{(stockData as {symbol: string}).symbol}:</span>
+                                      <span className="font-bold text-gray-900">{(stockData as {totalLots: number}).totalLots.toLocaleString()} lot</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-gray-500 text-sm">Bu aracı kurumda henüz hisse bulunmuyor</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <span className="text-lg">Henüz aracı kurum verisi bulunmuyor</span>
                         </div>
                       )}
                     </div>
