@@ -499,7 +499,7 @@ export default function BrokersPage() {
                             <div key={brokerIndex} className="border rounded-lg p-4 bg-gray-50">
                               <h4 className="font-semibold text-gray-800 mb-3">{broker.name}</h4>
                               {Object.keys(broker.stocks).length > 0 ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-1 gap-3">
                                   {Object.entries(broker.stocks).map(([stockSymbol, stockData]) => (
                                     <div key={stockSymbol} className="flex justify-between items-center p-2 bg-white rounded border">
                                       <span className="font-medium text-gray-700">{(stockData as {symbol: string}).symbol}:</span>
