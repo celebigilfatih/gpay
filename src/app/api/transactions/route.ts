@@ -141,10 +141,8 @@ export async function POST(request: NextRequest) {
         // Calculate profit: (sell price - buy price) * lots
         profit = (priceNum - buyTransaction.price) * lotsNum;
         
-        // Calculate commission: 30% of profit (only if profit is positive)
-        if (profit > 0) {
-          commission = profit * 0.3;
-        }
+        // Calculate commission: 30% of profit (positive for profit, negative for loss)
+        commission = profit * 0.3;
       }
     }
 
