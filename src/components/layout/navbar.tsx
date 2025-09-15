@@ -32,6 +32,7 @@ export function Navbar() {
                 <Link href="/clients">Müşteriler</Link>
                 <Link href="/transactions">İşlemler</Link>
                 <Link href="/stocks">Hisse Senetleri</Link>
+                <Link href="/stock-costs">Hisse Maliyetleri</Link>
                 <Link href="/brokers">Aracı Kurumlar</Link>
               </div>
             )}
@@ -121,6 +122,13 @@ export function Navbar() {
                 onClick={closeMobileMenu}
               >
                 Hisse Senetleri
+              </Link>
+              <Link
+                href="/stock-costs"
+                className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-100"
+                onClick={closeMobileMenu}
+              >
+                Hisse Maliyetleri
               </Link>
               <Link
                 href="/brokers"
