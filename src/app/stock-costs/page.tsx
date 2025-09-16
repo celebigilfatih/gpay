@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Navbar } from "@/components/layout/navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -95,35 +96,40 @@ export default function StockCostsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <Skeleton className="h-8 w-64 mb-2" />
-          <Skeleton className="h-4 w-96" />
+      <>
+        <Navbar />
+        <div className="container mx-auto p-6">
+          <div className="mb-6">
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <div className="grid gap-6">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-32 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
-        <div className="grid gap-6">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-32" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-32 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Hisse Bazlı Müşteri Maliyetleri</h1>
-        <p className="text-muted-foreground">
-          Müşterilerinizin hisse senetlerindeki pozisyonlarını ve maliyetlerini görüntüleyin.
-        </p>
-      </div>
+    <>
+      <Navbar />
+      <div className="container mx-auto p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Hisse Bazlı Müşteri Maliyetleri</h1>
+          <p className="text-muted-foreground">
+            Müşterilerinizin hisse senetlerindeki pozisyonlarını ve maliyetlerini görüntüleyin.
+          </p>
+        </div>
 
       {stockCosts.length === 0 ? (
         <Card>
@@ -219,6 +225,7 @@ export default function StockCostsPage() {
           })}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
