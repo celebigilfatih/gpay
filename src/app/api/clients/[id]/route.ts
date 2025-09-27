@@ -112,9 +112,22 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  
+  // Debug logging
+  console.log('🔍 DELETE request received for client:', id);
+  console.log('🔍 Request headers:', Object.fromEntries(request.headers.entries()));
+  
   const session = await getServerSession(authOptions) as Session | null;
+  
+  console.log('🔍 Session status:', {
+    hasSession: !!session,
+    hasUser: !!session?.user,
+    userId: session?.user?.id,
+    userEmail: session?.user?.email
+  });
 
   if (!session || !session.user) {
+    console.log('❌ Unauthorized: No session or user');
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

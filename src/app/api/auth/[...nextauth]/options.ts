@@ -5,8 +5,11 @@ import type { Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 
 export const authOptions = {
+  debug: process.env.NODE_ENV === 'development',
+  secret: process.env.NEXTAUTH_SECRET || 'your-secret-key-here',
   session: {
     strategy: "jwt" as const,
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   providers: [
     CredentialsProvider({
