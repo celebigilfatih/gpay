@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 async function createBarisClient() {
   try {
-    const barisUserId = '7b06b0ea-ec73-428c-8dcb-bb6b7fe0b315';
+    const barisUserId = '7610e9fa-4218-49a8-be54-73689005bbc5';
     
     console.log('Barış Manço için client kaydı oluşturuluyor...');
     

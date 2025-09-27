@@ -19,6 +19,7 @@ model User {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   clients   Client[]
+  payments  Payment[]
 }
 
 model Client {
@@ -33,6 +34,7 @@ model Client {
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions  Transaction[]
   brokers       ClientBroker[]
+  payments      Payment[]
 }
 
 model Stock {
@@ -95,7 +97,29 @@ enum Role {
   ADMIN
 }
 
+model Payment {
+  id          String      @id @default(uuid())
+  amount      Float       // Ödenen tutar
+  date        DateTime    // Ödeme tarihi
+  description String?     // Ödeme açıklaması
+  method      PaymentMethod @default(CASH) // Ödeme yöntemi
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  clientId    String
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId      String      // Ödemeyi kaydeden kullanıcı
+  user        User        @relation(fields: [userId], references: [id])
+}
+
 enum TransactionType {
   BUY
   SELL
+}
+
+enum PaymentMethod {
+  CASH        // Nakit
+  BANK        // Banka havalesi
+  CREDIT_CARD // Kredi kartı
+  CHECK       // Çek
+  OTHER       // Diğer
 }
