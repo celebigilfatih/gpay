@@ -28,6 +28,14 @@ interface Transaction {
   type: string;
 }
 
+interface Payment {
+  id: string;
+  amount: number;
+  method: string;
+  date: string;
+  description?: string;
+}
+
 interface CollectionData {
   client: {
     id: string;
@@ -57,6 +65,8 @@ export default function CollectionsPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClientPayments, setSelectedClientPayments] = useState<Payment[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
 
   useEffect(() => {
     fetchCollections();
@@ -74,6 +84,22 @@ export default function CollectionsPage() {
       console.error('Error fetching collections:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchClientPayments = async (clientId: string) => {
+    setLoadingPayments(true);
+    try {
+      const response = await fetch(`/api/payments?clientId=${clientId}`);
+      if (response.ok) {
+        const payments = await response.json();
+        setSelectedClientPayments(payments);
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      setSelectedClientPayments([]);
+    } finally {
+      setLoadingPayments(false);
     }
   };
 
@@ -250,7 +276,11 @@ export default function CollectionsPage() {
                         <div className="flex justify-center gap-2">
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => fetchClientPayments(collection.client.id)}
+                              >
                                 <Eye className="w-4 h-4" />
                               </Button>
                             </DialogTrigger>
@@ -332,6 +362,54 @@ export default function CollectionsPage() {
                                       </TableBody>
                                     </Table>
                                   </div>
+                                </div>
+
+                                {/* Ödeme Geçmişi Bölümü */}
+                                <div>
+                                  <h4 className="font-medium mb-2">Ödeme Geçmişi</h4>
+                                  {loadingPayments ? (
+                                    <div className="text-center py-4 text-gray-500">
+                                      Ödeme geçmişi yükleniyor...
+                                    </div>
+                                  ) : selectedClientPayments.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow>
+                                            <TableHead>Tarih</TableHead>
+                                            <TableHead>Tutar</TableHead>
+                                            <TableHead>Ödeme Yöntemi</TableHead>
+                                            <TableHead>Açıklama</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {selectedClientPayments.map((payment) => (
+                                            <TableRow key={payment.id}>
+                                              <TableCell>{formatDate(payment.date)}</TableCell>
+                                              <TableCell className="text-green-600 font-medium">
+                                                {formatCurrency(payment.amount)}
+                                              </TableCell>
+                                              <TableCell>
+                                                <Badge variant="outline">
+                                                  {payment.method === 'CASH' ? 'Nakit' : 
+                                                   payment.method === 'BANK_TRANSFER' ? 'Havale' : 
+                                                   payment.method === 'CREDIT_CARD' ? 'Kredi Kartı' : 
+                                                   payment.method}
+                                                </Badge>
+                                              </TableCell>
+                                              <TableCell className="text-sm text-gray-600">
+                                                {payment.description || '-'}
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
+                                  ) : (
+                                    <div className="text-center py-4 text-gray-500">
+                                      Bu müşteri için henüz ödeme kaydı bulunmuyor.
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </DialogContent>

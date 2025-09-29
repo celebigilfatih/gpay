@@ -51,16 +51,24 @@ type Transaction = {
   };
 };
 
+interface CollectionData {
+  totalCommission: number;
+  totalPayments: number;
+  remainingBalance: number;
+  paymentCount: number;
+}
+
 export default function ClientTransactionsPage() {
   const params = useParams();
   const clientId = params.id as string;
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [client, setClient] = useState<Client | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [collectionData, setCollectionData] = useState<CollectionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
-  const { data: session, status } = useSession();
-  const router = useRouter();
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -99,6 +107,32 @@ export default function ClientTransactionsPage() {
       }
       const transactionsData = await transactionsResponse.json();
       setTransactions(transactionsData);
+
+      // Fetch collection data (payments) for this client
+      const paymentsResponse = await fetch(`/api/payments?clientId=${clientId}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      if (paymentsResponse.ok) {
+        const paymentsData = await paymentsResponse.json();
+        
+        // Calculate collection summary
+        const totalCommission = transactionsData
+          .filter((t: Transaction) => t.commission !== null)
+          .reduce((sum: number, t: Transaction) => sum + (t.commission || 0), 0);
+        
+        const totalPayments = paymentsData.reduce((sum: number, p: any) => sum + p.amount, 0);
+        const remainingBalance = totalCommission - totalPayments;
+        
+        setCollectionData({
+          totalCommission,
+          totalPayments,
+          remainingBalance,
+          paymentCount: paymentsData.length
+        });
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -228,7 +262,7 @@ export default function ClientTransactionsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Toplam İşlem</CardTitle>
@@ -253,6 +287,31 @@ export default function ClientTransactionsPage() {
               <p className="text-2xl font-bold text-blue-600">{totalCommission.toLocaleString('tr-TR')} ₺</p>
             </CardContent>
           </Card>
+          {collectionData && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Tahsilat Durumu</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Toplam Ödeme:</span>
+                    <span className="font-medium text-green-600">₺{collectionData.totalPayments.toLocaleString('tr-TR')}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Kalan Bakiye:</span>
+                    <span className={`font-medium ${collectionData.remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      ₺{collectionData.remainingBalance.toLocaleString('tr-TR')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Ödeme Sayısı:</span>
+                    <span>{collectionData.paymentCount}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Hisse Özeti - Full Width */}
