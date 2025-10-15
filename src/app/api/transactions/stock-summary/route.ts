@@ -90,24 +90,28 @@ export async function GET(request: NextRequest) {
       brokers: Map<string, { totalLots: number; buyLots: number; sellLots: number }>;
     }>);
 
-    // Convert Map to Object for JSON serialization
-    const formattedStockSummary = Object.values(stockSummary).map(stock => ({
-      symbol: stock.symbol,
-      name: stock.name,
-      totalLots: stock.totalLots,
-      buyLots: stock.buyLots,
-      sellLots: stock.sellLots,
-      brokers: Object.fromEntries(
-        Array.from(stock.brokers.entries()).map(([brokerName, data]) => [
-          brokerName,
-          {
-            totalLots: data.totalLots,
-            buyLots: data.buyLots,
-            sellLots: data.sellLots,
-          },
-        ])
-      ),
-    }));
+    // Convert Map to Object for JSON serialization and filter only positive lots
+    const formattedStockSummary = Object.values(stockSummary)
+      .filter(stock => stock.totalLots > 0) // Only show stocks with positive total lots
+      .map(stock => ({
+        symbol: stock.symbol,
+        name: stock.name,
+        totalLots: stock.totalLots,
+        buyLots: stock.buyLots,
+        sellLots: stock.sellLots,
+        brokers: Object.fromEntries(
+          Array.from(stock.brokers.entries())
+            .filter(([_, data]) => data.totalLots > 0) // Only show brokers with positive lots
+            .map(([brokerName, data]) => [
+              brokerName,
+              {
+                totalLots: data.totalLots,
+                buyLots: data.buyLots,
+                sellLots: data.sellLots,
+              },
+            ])
+        ),
+      }));
 
     return NextResponse.json(formattedStockSummary);
   } catch (error) {

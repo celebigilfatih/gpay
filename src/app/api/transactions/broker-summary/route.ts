@@ -74,26 +74,30 @@ export async function GET() {
       stocks: Map<string, { symbol: string; name: string; totalLots: number; buyLots: number; sellLots: number }>;
     }>);
 
-    // Convert Map to Object for JSON serialization
-    const formattedBrokerSummary = Object.values(brokerSummary).map(broker => ({
-      name: broker.name,
-      code: broker.code,
-      totalLots: broker.totalLots,
-      buyLots: broker.buyLots,
-      sellLots: broker.sellLots,
-      stocks: Object.fromEntries(
-        Array.from(broker.stocks.entries()).map(([stockSymbol, data]) => [
-          stockSymbol,
-          {
-            symbol: data.symbol,
-            name: data.name,
-            totalLots: data.totalLots,
-            buyLots: data.buyLots,
-            sellLots: data.sellLots,
-          },
-        ])
-      ),
-    }));
+    // Convert Map to Object for JSON serialization and filter only positive lots
+    const formattedBrokerSummary = Object.values(brokerSummary)
+      .filter(broker => broker.totalLots > 0) // Only show brokers with positive total lots
+      .map(broker => ({
+        name: broker.name,
+        code: broker.code,
+        totalLots: broker.totalLots,
+        buyLots: broker.buyLots,
+        sellLots: broker.sellLots,
+        stocks: Object.fromEntries(
+          Array.from(broker.stocks.entries())
+            .filter(([_, data]) => data.totalLots > 0) // Only show stocks with positive lots
+            .map(([stockSymbol, data]) => [
+              stockSymbol,
+              {
+                symbol: data.symbol,
+                name: data.name,
+                totalLots: data.totalLots,
+                buyLots: data.buyLots,
+                sellLots: data.sellLots,
+              },
+            ])
+        ),
+      }));
 
     return NextResponse.json(formattedBrokerSummary);
   } catch (error) {

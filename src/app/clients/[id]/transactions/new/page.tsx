@@ -40,7 +40,16 @@ type Stock = {
   name: string;
 };
 
-const transactionSchema = z.object({
+type ClientPosition = {
+  stockId: string;
+  stock: Stock;
+  broker: Broker | null;
+  availableLots: number;
+  averagePrice: number;
+};
+
+// Base schema - will be extended dynamically
+const baseTransactionSchema = z.object({
   stockId: z.string().min(1, "Hisse seçimi zorunludur"),
   type: z.enum(["BUY", "SELL"], {
     message: "İşlem tipi seçimi zorunludur",
@@ -53,7 +62,7 @@ const transactionSchema = z.object({
   notes: z.string().optional(),
 });
 
-type TransactionFormValues = z.infer<typeof transactionSchema>;
+type TransactionFormValues = z.infer<typeof baseTransactionSchema>;
 
 export default function NewTransactionPage() {
   const params = useParams();
@@ -62,14 +71,34 @@ export default function NewTransactionPage() {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [brokers, setBrokers] = useState<Broker[]>([]);
   const [buyTransactions, setBuyTransactions] = useState<BuyTransaction[]>([]);
+  const [clientPositions, setClientPositions] = useState<ClientPosition[]>([]);
   const [selectedType, setSelectedType] = useState<"BUY" | "SELL">("BUY");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  // Dynamic schema based on selected stock and type
+  const createTransactionSchema = (selectedStockId?: string, selectedType?: string) => {
+    return baseTransactionSchema.refine((data) => {
+      if (data.type === "SELL" && selectedStockId) {
+        const selectedStock = clientPositions.find(pos => pos.stockId === selectedStockId);
+        if (!selectedStock) {
+          return false;
+        }
+        if (data.lots > selectedStock.availableLots) {
+          return false;
+        }
+      }
+      return true;
+    }, {
+      message: "Yetersiz lot! Mevcut lot sayınızdan fazla satış yapamazsınız.",
+      path: ["lots"]
+    });
+  };
+
   const form = useForm({
-    resolver: zodResolver(transactionSchema),
+    resolver: zodResolver(baseTransactionSchema),
     defaultValues: {
       type: "BUY",
       lots: undefined,
@@ -80,6 +109,17 @@ export default function NewTransactionPage() {
       notes: "",
     },
   });
+
+  const selectedStockId = form.watch("stockId");
+  const watchedType = form.watch("type");
+  const transactionSchema = createTransactionSchema(selectedStockId, watchedType);
+
+  // Dinamik schema değişikliklerini form'a uygula
+  useEffect(() => {
+    const newSchema = createTransactionSchema(selectedStockId, watchedType);
+    // Form resolver'ını güncelle - bu React Hook Form'da desteklenmediği için
+    // validation'ı onSubmit'te manuel olarak yapacağız
+  }, [selectedStockId, watchedType]);
 
   useEffect(() => {
     console.log("[CLIENT] useEffect triggered, status:", status);
@@ -137,6 +177,16 @@ export default function NewTransactionPage() {
       }
       const buyTransactionsData = await buyTransactionsResponse.json();
       setBuyTransactions(buyTransactionsData);
+
+      // Fetch client positions
+      const positionsResponse = await fetch(`/api/clients/${clientId}/positions`, {
+        credentials: 'include'
+      });
+      if (!positionsResponse.ok) {
+        throw new Error("Failed to fetch client positions");
+      }
+      const positionsData = await positionsResponse.json();
+      setClientPositions(positionsData);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -146,6 +196,20 @@ export default function NewTransactionPage() {
 
   const onSubmit = async (data: TransactionFormValues) => {
     if (!client) return;
+    
+    // Dinamik schema ile validation yap
+    const currentSchema = createTransactionSchema(data.stockId, data.type);
+    const validationResult = currentSchema.safeParse(data);
+    
+    if (!validationResult.success) {
+      // Form hatalarını göster
+      validationResult.error.errors.forEach(error => {
+        form.setError(error.path[0] as keyof TransactionFormValues, {
+          message: error.message
+        });
+      });
+      return;
+    }
     
     setSubmitting(true);
     try {
@@ -217,6 +281,53 @@ export default function NewTransactionPage() {
           <Button variant="outline" asChild>
             <Link href={`/clients/${clientId}/transactions`}>İşlemlere Dön</Link>
           </Button>
+        </div>
+
+        {/* Satılabilir Lotlar ve Aracı Kurumlar Card'ları */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Satılabilir Lotlar */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Satılabilir Lotlar</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {clientPositions.length > 0 ? (
+                <div className="space-y-2">
+                  {clientPositions.map((position) => (
+                    <div key={`${position.stockId}-${position.broker?.id || 'null'}`} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                      <div>
+                        <span className="font-medium">{position.stock.symbol}</span>
+                        {position.broker && <span className="text-sm text-gray-500 ml-2">({position.broker.name})</span>}
+                      </div>
+                      <span className="font-bold text-green-600">{position.availableLots} lot</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Satılabilir lot bulunmamaktadır.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Aracı Kurumlar */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Aracı Kurumlar</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {brokers.length > 0 ? (
+                <div className="space-y-2">
+                  {brokers.map((broker) => (
+                    <div key={broker.id} className="p-2 bg-blue-50 rounded">
+                      <span className="font-medium">{broker.name}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Aracı kurum bulunmamaktadır.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <Card>
@@ -328,25 +439,51 @@ export default function NewTransactionPage() {
                   <FormField
                     control={form.control}
                     name="lots"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Lot</FormLabel>
-                        <FormControl>
-                          <Input
-                             type="number"
-                             placeholder="Lot sayısı giriniz"
-                             value={field.value?.toString() || ""}
-                             onChange={(e) =>
-                               field.onChange(parseInt(e.target.value) || undefined)
-                             }
-                             onBlur={field.onBlur}
-                             name={field.name}
-                             ref={field.ref}
-                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field, fieldState }) => {
+                      const selectedStockId = form.watch("stockId");
+                      const selectedPosition = clientPositions.find(pos => pos.stockId === selectedStockId);
+                      const availableLots = selectedPosition?.availableLots || 0;
+                      const currentLots = field.value || 0;
+                      const isOverLimit = selectedType === "SELL" && selectedStockId && currentLots > availableLots;
+                      
+                      return (
+                        <FormItem>
+                          <FormLabel>Lot</FormLabel>
+                          <FormControl>
+                            <Input
+                               type="number"
+                               placeholder="Lot sayısı giriniz"
+                               value={field.value?.toString() || ""}
+                               onChange={(e) =>
+                                 field.onChange(parseInt(e.target.value) || undefined)
+                               }
+                               onBlur={field.onBlur}
+                               name={field.name}
+                               ref={field.ref}
+                               className={isOverLimit ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
+                             />
+                          </FormControl>
+                          {selectedType === "SELL" && selectedStockId && (
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">
+                                Mevcut lot sayınız: <span className="font-medium text-green-600">{availableLots}</span>
+                              </p>
+                              {isOverLimit && (
+                                <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                                  <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                  </svg>
+                                  <span className="text-sm text-red-700 font-medium">
+                                    Yetersiz lot! Maksimum {availableLots} lot satabilirsiniz.
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
 
                   <FormField
@@ -402,7 +539,23 @@ export default function NewTransactionPage() {
                 />
 
                 <div className="flex justify-end">
-                  <Button type="submit" disabled={submitting}>
+                  <Button 
+                    type="submit" 
+                    disabled={submitting || (selectedType === "SELL" && selectedStockId && (() => {
+                      const selectedStock = clientPositions.find(pos => pos.stockId === selectedStockId);
+                      const currentLots = form.watch("lots") || 0;
+                      return selectedStock && currentLots > selectedStock.availableLots;
+                    })())}
+                    className={
+                      selectedType === "SELL" && selectedStockId && (() => {
+                        const selectedStock = clientPositions.find(pos => pos.stockId === selectedStockId);
+                        const currentLots = form.watch("lots") || 0;
+                        return selectedStock && currentLots > selectedStock.availableLots;
+                      })() 
+                        ? "bg-red-500 hover:bg-red-600 cursor-not-allowed" 
+                        : ""
+                    }
+                  >
                     {submitting ? "Kaydediliyor..." : "İşlemi Kaydet"}
                   </Button>
                 </div>

@@ -403,7 +403,9 @@ export default function ClientTransactionsPage() {
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg font-medium">Hisse Özeti</CardTitle>
                 <div className="bg-red-500 text-white px-3 py-1 rounded-md text-sm font-medium">
-                  Toplam: {stockSummaryArray.reduce((total, stock) => total + Math.abs(stock.totalLots), 0)} Lot
+                  Toplam: {stockSummaryArray
+                    .filter(stock => stock.totalLots > 0)
+                    .reduce((total, stock) => total + stock.totalLots, 0)} Lot
                 </div>
               </div>
             </CardHeader>
@@ -412,17 +414,21 @@ export default function ClientTransactionsPage() {
                 <p className="text-gray-500">Henüz hisse işlemi bulunmamaktadır.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {stockSummaryArray.map(stock => (
+                  {stockSummaryArray
+                    .filter(stock => stock.totalLots > 0) // Sadece pozitif (kalan) lotları göster
+                    .map(stock => (
                     <div key={stock.symbol} className="bg-gray-50 rounded-lg border p-4">
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-semibold text-gray-900">{stock.symbol}</span>
-                        <span className="font-bold text-blue-600">{Math.abs(stock.totalLots)} Lot</span>
+                        <span className="font-bold text-blue-600">{stock.totalLots} Lot</span>
                       </div>
                       <div className="space-y-1">
-                        {stock.brokerNames.map((broker, index) => (
+                        {stock.brokerNames
+                          .filter(broker => (stock.brokers.get(broker) || 0) > 0) // Sadece pozitif lot sayısına sahip aracı kurumları göster
+                          .map((broker, index) => (
                           <div key={index} className="text-xs text-gray-600 flex justify-between">
                             <span>{broker}</span>
-                            <span className="font-medium">{Math.abs(stock.brokers.get(broker) || 0)} Lot</span>
+                            <span className="font-medium">{stock.brokers.get(broker)} Lot</span>
                           </div>
                         ))}
                       </div>

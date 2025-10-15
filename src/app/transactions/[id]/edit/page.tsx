@@ -356,7 +356,7 @@ export default function EditTransactionPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Seçim yapın</SelectItem>
+                            <SelectItem value="none">Seçim yapın</SelectItem>
                             {buyTransactions.map((buyTx) => (
                               <SelectItem key={buyTx.id} value={buyTx.id}>
                                 {new Date(buyTx.date).toLocaleDateString("tr-TR")} - {buyTx.lots} lot - ₺{buyTx.price}
