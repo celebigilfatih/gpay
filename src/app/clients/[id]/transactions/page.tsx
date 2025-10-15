@@ -51,11 +51,24 @@ type Transaction = {
   };
 };
 
+type Payment = {
+  id: string;
+  amount: number;
+  date: string;
+  description: string | null;
+  method: string;
+  client: {
+    id: string;
+    fullName: string;
+  };
+};
+
 interface CollectionData {
   totalCommission: number;
   totalPayments: number;
   remainingBalance: number;
   paymentCount: number;
+  payments?: Payment[];
 }
 
 export default function ClientTransactionsPage() {
@@ -69,6 +82,8 @@ export default function ClientTransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+  const [paymentDeleteDialogOpen, setPaymentDeleteDialogOpen] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -130,7 +145,8 @@ export default function ClientTransactionsPage() {
           totalCommission,
           totalPayments,
           remainingBalance,
-          paymentCount: paymentsData.length
+          paymentCount: paymentsData.length,
+          payments: paymentsData
         });
       }
     } catch (error) {
@@ -154,8 +170,8 @@ export default function ClientTransactionsPage() {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         if (response.status === 404) {
           alert('İşlem bulunamadı. Sayfa yenileniyor...');
-          // Refresh the transactions list
-          await fetchTransactions();
+          // Refresh all data
+          await fetchClientData();
           setDeleteDialogOpen(false);
           setTransactionToDelete(null);
           return;
@@ -163,8 +179,8 @@ export default function ClientTransactionsPage() {
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Remove the transaction from local state
-      setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      // Refresh all client data to ensure collection calculations are updated
+      await fetchClientData();
       setDeleteDialogOpen(false);
       setTransactionToDelete(null);
       
@@ -172,6 +188,41 @@ export default function ClientTransactionsPage() {
     } catch (error) {
       console.error('Error deleting transaction:', error);
       alert(`İşlem silinirken bir hata oluştu: ${(error as Error).message}`);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    try {
+      const response = await fetch(`/api/payments/${paymentId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        if (response.status === 404) {
+          alert('Ödeme bulunamadı. Sayfa yenileniyor...');
+          // Refresh all data
+          await fetchClientData();
+          setPaymentDeleteDialogOpen(false);
+          setPaymentToDelete(null);
+          return;
+        }
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Refresh all client data to ensure collection calculations are updated
+      await fetchClientData();
+      setPaymentDeleteDialogOpen(false);
+      setPaymentToDelete(null);
+      
+      alert('Ödeme başarıyla silindi.');
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      alert(`Ödeme silinirken bir hata oluştu: ${(error as Error).message}`);
     }
   };
 
@@ -309,6 +360,37 @@ export default function ClientTransactionsPage() {
                     <span>{collectionData.paymentCount}</span>
                   </div>
                 </div>
+                
+                {/* Ödeme Listesi */}
+                {collectionData.payments && collectionData.payments.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="text-sm font-medium mb-2">Ödemeler:</h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {collectionData.payments.map((payment) => (
+                        <div key={payment.id} className="flex justify-between items-center text-xs bg-gray-50 p-2 rounded">
+                          <div>
+                            <div className="font-medium">₺{payment.amount.toLocaleString('tr-TR')}</div>
+                            <div className="text-gray-500">{new Date(payment.date).toLocaleDateString('tr-TR')}</div>
+                            {payment.description && (
+                              <div className="text-gray-500 text-xs">{payment.description}</div>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setPaymentToDelete(payment.id);
+                              setPaymentDeleteDialogOpen(true);
+                            }}
+                            className="h-6 w-6 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -475,6 +557,33 @@ export default function ClientTransactionsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Ödeme Silme Dialog'u */}
+      <Dialog open={paymentDeleteDialogOpen} onOpenChange={setPaymentDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ödemeyi Sil</DialogTitle>
+            <DialogDescription>
+              Bu ödemeyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setPaymentDeleteDialogOpen(false);
+              setPaymentToDelete(null);
+            }}>
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={() => {
+              if (paymentToDelete) {
+                handleDeletePayment(paymentToDelete);
+              }
+            }}>
+              Sil
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
