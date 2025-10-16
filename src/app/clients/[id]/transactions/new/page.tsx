@@ -32,6 +32,10 @@ type BuyTransaction = {
     symbol: string;
     name: string;
   };
+  broker?: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 type Stock = {
@@ -112,7 +116,18 @@ export default function NewTransactionPage() {
 
   const selectedStockId = form.watch("stockId");
   const watchedType = form.watch("type");
+  const selectedBuyTransactionId = form.watch("buyTransactionId");
   const transactionSchema = createTransactionSchema(selectedStockId, watchedType);
+
+  // Seçilen alış işlemine göre aracı kurum bilgisini otomatik doldur
+  useEffect(() => {
+    if (selectedBuyTransactionId && buyTransactions.length > 0) {
+      const selectedBuyTransaction = buyTransactions.find(tx => tx.id === selectedBuyTransactionId);
+      if (selectedBuyTransaction && selectedBuyTransaction.broker) {
+        form.setValue("brokerId", selectedBuyTransaction.broker.id);
+      }
+    }
+  }, [selectedBuyTransactionId, buyTransactions, form]);
 
   // Dinamik schema değişikliklerini form'a uygula
   useEffect(() => {
@@ -384,32 +399,6 @@ export default function NewTransactionPage() {
                   )}
                 />
 
-
-
-                <FormField
-                  control={form.control}
-                  name="brokerId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Aracı Kurum</FormLabel>
-                      <FormControl>
-                        <select
-                          {...field}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="">Aracı kurum seçiniz</option>
-                          {brokers.map((broker) => (
-                            <option key={broker.id} value={broker.id}>
-                              {broker.name}
-                            </option>
-                          ))}
-                        </select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 {selectedType === "SELL" && buyTransactions.length > 0 && (
                   <FormField
                     control={form.control}
@@ -435,6 +424,32 @@ export default function NewTransactionPage() {
                     )}
                   />
                 )}
+
+                <FormField
+                  control={form.control}
+                  name="brokerId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Aracı Kurum</FormLabel>
+                      <FormControl>
+                        <select
+                          {...field}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="">Aracı kurum seçiniz</option>
+                          {brokers.map((broker) => (
+                            <option key={broker.id} value={broker.id}>
+                              {broker.name}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
