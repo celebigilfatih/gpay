@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
 
 type Broker = {
   id: string;
@@ -263,7 +264,7 @@ export default function NewClientPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="brokerageFirm">Aracı Kurum</Label>
-                <MultiSelect
+                <SearchableMultiSelect
                   options={brokersList}
                   selected={selectedBrokers}
                   onChange={setSelectedBrokers}
@@ -280,7 +281,7 @@ export default function NewClientPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="city">Şehir</Label>
-                <MultiSelect
+                <SearchableMultiSelect
                   options={citiesList}
                   selected={selectedCities}
                   onChange={setSelectedCities}
@@ -293,7 +294,7 @@ export default function NewClientPage() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full cursor-pointer">
                 Müşteri Ekle
               </Button>
             </form>

@@ -9,6 +9,7 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandInput,
+  CommandItem,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -101,13 +102,19 @@ export function MultiSelect({
           <CommandEmpty>{emptyMessage}</CommandEmpty>
           <CommandGroup className="max-h-64 overflow-auto">
             {options.map((option) => (
-              <div
+              <CommandItem
                 key={option.value}
-                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-                onClick={() => {
-                  handleSelect(option.value);
-                  setOpen(true);
+                value={option.label}
+                onSelect={(currentValue) => {
+                  // CommandItem otomatik olarak label'ı lowercase yapar, bu yüzden orijinal value'yu bulmalıyız
+                  const selectedOption = options.find(opt => 
+                    opt.label.toLowerCase() === currentValue.toLowerCase()
+                  );
+                  if (selectedOption) {
+                    handleSelect(selectedOption.value);
+                  }
                 }}
+                className="cursor-pointer"
               >
                 <div
                   className={cn(
@@ -116,13 +123,22 @@ export function MultiSelect({
                       ? "bg-primary text-primary-foreground"
                       : "opacity-50"
                   )}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelect(option.value);
+                  }}
                 >
                   {selected.includes(option.value) && (
                     <Check className="h-3 w-3" />
                   )}
                 </div>
-                <span>{option.label}</span>
-              </div>
+                <span onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSelect(option.value);
+                }}>{option.label}</span>
+              </CommandItem>
             ))}
           </CommandGroup>
         </Command>
