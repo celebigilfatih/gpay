@@ -96,6 +96,13 @@ export function SearchableMultiSelect({
         </div>
       )}
 
+      {/* Placeholder when no items selected */}
+      {selected.length === 0 && (
+        <div className="mb-2 text-sm text-muted-foreground">
+          {placeholder}
+        </div>
+      )}
+
       {/* Arama input'u */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />

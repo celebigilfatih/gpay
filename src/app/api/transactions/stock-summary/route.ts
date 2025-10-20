@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
         sellLots: stock.sellLots,
         brokers: Object.fromEntries(
           Array.from(stock.brokers.entries())
-            .filter(([_, data]) => data.totalLots > 0) // Only show brokers with positive lots
+            .filter(([, data]) => data.totalLots > 0) // Only show brokers with positive lots
             .map(([brokerName, data]) => [
               brokerName,
               {

@@ -1,13 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/options";
 import { PrismaClient } from "@prisma/client";
+import type { Session } from "next-auth";
+
+// Type tanımları
+type ClientCommissionData = {
+  client: {
+    id: string;
+    fullName: string;
+  };
+  totalCommission: number;
+  positiveCommission: number;
+  negativeCommission: number;
+  totalPayments: number;
+  remainingBalance: number;
+  transactionCount: number;
+  transactions: Array<{
+    id: string;
+    date: Date;
+    stock: { symbol: string; name: string };
+    broker: { name: string } | null;
+    lots: number;
+    price: number;
+    profit: number | null;
+    commission: number | null;
+    type: string;
+  }>;
+};
 
 const prisma = new PrismaClient();
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session: Session | null = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -73,6 +99,7 @@ export async function GET(request: NextRequest) {
           positiveCommission: 0, // Tahsil edilecek
           negativeCommission: 0, // İade edilecek
           totalPayments: 0, // Toplam ödenen
+          remainingBalance: 0, // Kalan bakiye
           transactionCount: 0,
           transactions: [],
         };
@@ -101,7 +128,7 @@ export async function GET(request: NextRequest) {
       });
 
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, ClientCommissionData>);
 
     // Ödemeleri müşteri bazında topla
     const clientPayments = payments.reduce((acc, payment) => {
@@ -122,30 +149,30 @@ export async function GET(request: NextRequest) {
 
     // Array'e çevir ve sırala (kalan bakiyeye göre)
     const collectionsData = Object.values(clientCommissions).sort(
-      (a: any, b: any) => Math.abs(b.remainingBalance) - Math.abs(a.remainingBalance)
+      (a, b) => Math.abs(b.remainingBalance) - Math.abs(a.remainingBalance)
     );
 
     // Özet istatistikleri hesapla
     const summary = {
       totalClients: collectionsData.length,
       totalCommissionToCollect: collectionsData.reduce(
-        (sum: number, client: any) => sum + client.positiveCommission,
+        (sum, client) => sum + client.positiveCommission,
         0
       ),
       totalCommissionToRefund: collectionsData.reduce(
-        (sum: number, client: any) => sum + client.negativeCommission,
+        (sum, client) => sum + client.negativeCommission,
         0
       ),
       totalPayments: collectionsData.reduce(
-        (sum: number, client: any) => sum + client.totalPayments,
+        (sum, client) => sum + client.totalPayments,
         0
       ),
       totalRemainingBalance: collectionsData.reduce(
-        (sum: number, client: any) => sum + client.remainingBalance,
+        (sum, client) => sum + client.remainingBalance,
         0
       ),
       netCommission: collectionsData.reduce(
-        (sum: number, client: any) => sum + client.totalCommission,
+        (sum, client) => sum + client.totalCommission,
         0
       ),
       totalTransactions: transactions.length,

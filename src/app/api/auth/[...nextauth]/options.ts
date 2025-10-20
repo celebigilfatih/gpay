@@ -1,8 +1,6 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcrypt";
 import { prisma } from "@/lib/prisma";
-import type { Session } from "next-auth";
-import type { JWT } from "next-auth/jwt";
 
 export const authOptions = {
   debug: process.env.NODE_ENV === 'development',
@@ -60,6 +58,7 @@ export const authOptions = {
     }),
   ],
   callbacks: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     session: ({ session, token }: any) => {
       if (token) {
         session.user = {
@@ -70,6 +69,7 @@ export const authOptions = {
       }
       return session;
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jwt: ({ token, user }: any) => {
       if (user) {
         token.id = user.id;

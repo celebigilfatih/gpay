@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const { getServerSession } = require('next-auth/next');
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 

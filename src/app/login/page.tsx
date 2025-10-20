@@ -65,7 +65,7 @@ function LoginForm() {
       
       router.push(callbackUrl);
       router.refresh();
-    } catch (error) {
+    } catch {
       toast({
         title: "Hata",
         description: "Giriş sırasında bir hata oluştu",

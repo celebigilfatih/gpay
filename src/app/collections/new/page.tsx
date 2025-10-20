@@ -12,13 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 
-interface Client {
-  id: string;
-  fullName: string;
-  phoneNumber: string;
-  city: string;
-}
-
 interface CollectionData {
   client: {
     id: string;
@@ -32,7 +25,6 @@ interface CollectionData {
 
 export default function NewPaymentPage() {
   const router = useRouter();
-  const [clients, setClients] = useState<Client[]>([]);
   const [collections, setCollections] = useState<CollectionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -59,10 +51,8 @@ export default function NewPaymentPage() {
       ]);
 
       if (clientsRes.ok && collectionsRes.ok) {
-        const clientsData = await clientsRes.json();
         const collectionsData = await collectionsRes.json();
-        
-        setClients(clientsData);
+
         setCollections(collectionsData.clients || []);
       }
     } catch (error) {

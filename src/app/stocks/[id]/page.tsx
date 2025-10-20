@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
@@ -44,17 +44,7 @@ export default function EditStockPage() {
     },
   });
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-
-    if (status === "authenticated") {
-      fetchStock();
-    }
-  }, [status, stockId, router]);
-
-  const fetchStock = async () => {
+  const fetchStock = useCallback(async () => {
     try {
       const response = await fetch(`/api/stocks/${stockId}`);
       if (!response.ok) {
@@ -71,7 +61,22 @@ export default function EditStockPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [stockId, form]);
+
+  useEffect(() => {
+    if (status === "loading") {
+      return;
+    }
+
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    if (status === "authenticated") {
+      fetchStock();
+    }
+  }, [status, stockId, router, fetchStock]);
 
   const onSubmit = async (data: StockFormValues) => {
     if (!stock) return;

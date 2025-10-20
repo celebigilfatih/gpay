@@ -41,7 +41,8 @@ export async function POST(req: Request) {
     });
 
     // Hassas bilgileri çıkararak kullanıcı nesnesini döndür
-    const { password: _, ...result } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...result } = user;
     
     return NextResponse.json(
       { message: "Kullanıcı başarıyla oluşturuldu", user: result },

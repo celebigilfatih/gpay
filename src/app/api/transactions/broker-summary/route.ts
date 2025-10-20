@@ -85,7 +85,7 @@ export async function GET() {
         sellLots: broker.sellLots,
         stocks: Object.fromEntries(
           Array.from(broker.stocks.entries())
-            .filter(([_, data]) => data.totalLots > 0) // Only show stocks with positive lots
+            .filter(([, data]) => data.totalLots > 0) // Only show stocks with positive lots
             .map(([stockSymbol, data]) => [
               stockSymbol,
               {

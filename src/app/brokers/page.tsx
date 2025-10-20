@@ -54,8 +54,8 @@ export default function BrokersPage() {
   const [sortField, setSortField] = useState<SortField>('totalLots');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [stockBasedLots, setStockBasedLots] = useState<{ symbol: string; name: string; totalLots: number }[]>([]);
-  const [brokerBasedLots, setBrokerBasedLots] = useState<{ name: string; code: string; totalLots: number; stocks: any }[]>([]);
-  const { data: session, status } = useSession();
+  const [brokerBasedLots, setBrokerBasedLots] = useState<{ name: string; code: string; totalLots: number; stocks: Record<string, { symbol: string; totalLots: number }> }[]>([]);
+  const { status } = useSession();
   const router = useRouter();
 
   const addForm = useForm({

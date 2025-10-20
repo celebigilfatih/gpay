@@ -72,7 +72,10 @@ export async function GET() {
 // POST - Yeni aracı kurum ekle
 export async function POST(request: NextRequest) {
   try {
-    // Global access - no authentication required
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const body = await request.json();
     const validatedData = brokerSchema.parse(body);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../auth/[...nextauth]/options";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import type { Session } from "next-auth";
 
 // GET a specific client
@@ -10,7 +10,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const session = await getServerSession(authOptions) as Session | null;
 
   // Global access - no authentication required
 
@@ -111,52 +110,36 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  
-  // Debug logging
-  console.log('🔍 DELETE request received for client:', id);
-  console.log('🔍 Request headers:', Object.fromEntries(request.headers.entries()));
-  
-  const session = await getServerSession(authOptions) as Session | null;
-  
-  console.log('🔍 Session status:', {
-    hasSession: !!session,
-    hasUser: !!session?.user,
-    userId: session?.user?.id,
-    userEmail: session?.user?.email
-  });
-
-  if (!session || !session.user) {
-    console.log('❌ Unauthorized: No session or user');
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
-    // First check if the client exists and belongs to the user
-    const existingClient = await prisma.client.findUnique({
+    const { id } = await params;
+    
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if client exists and belongs to user
+    const existingClient = await prisma.client.findFirst({
       where: {
-        id,
-      },
+        id: id,
+        userId: session.user.id
+      }
     });
 
     if (!existingClient) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    if (existingClient.userId !== (session.user.id as string)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Delete the client (cascade delete will remove related transactions)
+    // Delete the client
     await prisma.client.delete({
       where: {
-        id,
-      },
+        id: id
+      }
     });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting client:", error);
+    return NextResponse.json({ message: "Client deleted successfully" });
+
+  } catch {
     return NextResponse.json(
       { error: "Failed to delete client" },
       { status: 500 }

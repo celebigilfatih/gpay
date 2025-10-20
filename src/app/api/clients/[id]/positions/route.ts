@@ -4,10 +4,30 @@ import { authOptions } from "../../../auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { Session } from "next-auth";
 
+// Type tanımları
+type TransactionGroup = {
+  stockId: string;
+  stock: {
+    id: string;
+    symbol: string;
+    name: string;
+  };
+  brokerId: string | null;
+  broker: {
+    id: string;
+    name: string;
+  } | null;
+  transactions: Array<{
+    type: 'BUY' | 'SELL';
+    lots: number;
+    price: number;
+  }>;
+};
+
 // GET - Belirli bir müşterinin hisse pozisyonlarını getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions) as Session | null;
@@ -15,7 +35,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const clientId = params.id;
+    const { id } = await params;
+    const clientId = id;
 
     // Müşterinin bu kullanıcıya ait olduğunu kontrol et
     const client = await prisma.client.findFirst({
@@ -70,21 +91,21 @@ export async function GET(
       }
       acc[key].transactions.push(transaction);
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, TransactionGroup>);
 
     // Her grup için net pozisyon hesapla
-    const positions = Object.values(groupedTransactions).map((group: any) => {
+    const positions = Object.values(groupedTransactions).map((group: TransactionGroup) => {
       // Net lot hesapla (BUY pozitif, SELL negatif)
-      const totalLots = group.transactions.reduce((sum: number, t: any) => {
+      const totalLots = group.transactions.reduce((sum: number, t) => {
         return sum + (t.type === 'BUY' ? t.lots : -t.lots);
       }, 0);
 
       // Sadece pozitif pozisyonları (satılabilir lotları) döndür
       if (totalLots > 0) {
         // Ortalama alış fiyatını hesapla
-        const buyTransactions = group.transactions.filter((t: any) => t.type === 'BUY');
-        const totalBuyValue = buyTransactions.reduce((sum: number, t: any) => sum + (t.lots * t.price), 0);
-        const totalBuyLots = buyTransactions.reduce((sum: number, t: any) => sum + t.lots, 0);
+        const buyTransactions = group.transactions.filter((t) => t.type === 'BUY');
+        const totalBuyValue = buyTransactions.reduce((sum: number, t) => sum + (t.lots * t.price), 0);
+        const totalBuyLots = buyTransactions.reduce((sum: number, t) => sum + t.lots, 0);
         const averagePrice = totalBuyLots > 0 ? totalBuyValue / totalBuyLots : 0;
 
         return {

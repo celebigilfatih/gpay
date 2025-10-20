@@ -2,22 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]/options';
 import { PrismaClient } from '@prisma/client';
+import { Session } from 'next-auth';
 
 const prisma = new PrismaClient();
 
 // GET a specific payment
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session: Session | null = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const paymentId = params.id;
+    const { id } = await params;
+    const paymentId = id;
 
     const payment = await prisma.payment.findUnique({
       where: {
@@ -59,16 +61,17 @@ export async function GET(
 // PUT (update) a payment
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session: Session | null = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const paymentId = params.id;
+    const { id } = await params;
+    const paymentId = id;
     const body = await request.json();
     const { amount, date, description, method } = body;
 
@@ -144,16 +147,17 @@ export async function PUT(
 // DELETE a payment
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session: Session | null = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const paymentId = params.id;
+    const { id } = await params;
+    const paymentId = id;
 
     // First, check if the payment exists and belongs to the user
     const existingPayment = await prisma.payment.findUnique({

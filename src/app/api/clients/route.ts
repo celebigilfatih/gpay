@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/options";
 import type { Session } from "next-auth";
 
 // GET all clients (global access)
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const clients = await prisma.client.findMany({
       orderBy: {

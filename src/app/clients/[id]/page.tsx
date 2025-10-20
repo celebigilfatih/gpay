@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/layout/navbar";
@@ -17,13 +17,6 @@ import { useForm, Controller } from "react-hook-form";
 type Broker = {
   id: string;
   name: string;
-};
-
-type UserBroker = {
-  id: string;
-  userId: string;
-  brokerId: string;
-  broker: Broker;
 };
 
 // Türkiye şehirleri listesi
@@ -133,68 +126,13 @@ export default function ClientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [userBrokers, setUserBrokers] = useState<UserBroker[]>([]);
   const [allBrokers, setAllBrokers] = useState<Broker[]>([]);
-  const [brokersLoading, setBrokersLoading] = useState(true);
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<FormData>();
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-
-    if (status === "authenticated") {
-      fetchClient();
-      fetchUserBrokers();
-      fetchAllBrokers();
-    }
-  }, [status, clientId, router]);
-
-  // allBrokers yüklendikten sonra form'u yeniden reset et
-  useEffect(() => {
-    if (client && allBrokers.length > 0) {
-      const brokerValues = client.brokerageFirm ? 
-        client.brokerageFirm.split(',').map((firm: string) => {
-          const trimmedFirm = firm.trim();
-          const broker = allBrokers.find(b => b.name === trimmedFirm);
-          return broker ? broker.id : null;
-        }).filter(id => id && id.trim() !== '') : [];
-      
-      const cityValue = citiesList.find(c => c.label === client.city)?.value || client.city;
-      
-      reset({
-        fullName: client.fullName,
-        phoneNumber: client.phoneNumber,
-        brokerageFirm: brokerValues,
-        city: cityValue
-      });
-    }
-  }, [client, allBrokers, reset]);
-
-  const fetchUserBrokers = async () => {
-    try {
-      const response = await fetch(`/api/clients/${clientId}/brokers`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch brokers');
-      }
-      const data = await response.json();
-      setUserBrokers(data);
-    } catch (error) {
-      console.error('Error fetching brokers:', error);
-    } finally {
-      setBrokersLoading(false);
-    }
-  };
-
-  const fetchAllBrokers = async () => {
+  const fetchAllBrokers = useCallback(async () => {
     try {
       const response = await fetch('/api/brokers', {
         credentials: 'include',
@@ -210,9 +148,9 @@ export default function ClientDetailPage() {
     } catch (error) {
       console.error('Error fetching all brokers:', error);
     }
-  };
+  }, []);
 
-  const fetchClient = async () => {
+  const fetchClient = useCallback(async () => {
     try {
       const response = await fetch(`/api/clients/${clientId}`, {
         credentials: 'include',
@@ -230,7 +168,39 @@ export default function ClientDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+
+    if (status === "authenticated") {
+      fetchClient();
+      fetchAllBrokers();
+    }
+  }, [status, clientId, router, fetchClient, fetchAllBrokers]);
+
+  // allBrokers yüklendikten sonra form'u yeniden reset et
+  useEffect(() => {
+    if (client && allBrokers.length > 0) {
+      const brokerValues = client.brokerageFirm ? 
+        client.brokerageFirm.split(',').map((firm: string) => {
+          const trimmedFirm = firm.trim();
+          const broker = allBrokers.find(b => b.name === trimmedFirm);
+          return broker ? broker.id : null;
+        }).filter((id): id is string => id !== null && id.trim() !== '') : [];
+      
+      const cityValue = citiesList.find(c => c.label === client.city)?.value || client.city;
+      
+      reset({
+        fullName: client.fullName,
+        phoneNumber: client.phoneNumber,
+        brokerageFirm: brokerValues,
+        city: cityValue
+      });
+    }
+  }, [client, allBrokers, reset]);
 
   const onSubmit = async (data: FormData) => {
     setSaving(true);
@@ -283,7 +253,7 @@ export default function ClientDetailPage() {
           const trimmedFirm = firm.trim();
           const broker = allBrokers.find(b => b.name === trimmedFirm);
           return broker ? broker.id : null;
-        }).filter(id => id && id.trim() !== '') : [];
+        }).filter((id): id is string => id !== null && id.trim() !== '') : [];
       const cityValue = citiesList.find(c => c.label === client.city)?.value || client.city;
       
       reset({
@@ -295,7 +265,7 @@ export default function ClientDetailPage() {
     }
   };
 
-  if (status === "loading" || loading || brokersLoading) {
+  if (status === "loading" || loading) {
     return (
       <>
         <Navbar />

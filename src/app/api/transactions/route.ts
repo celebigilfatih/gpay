@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/options";
-import type { Session } from "next-auth";
 import { TransactionType } from "@prisma/client";
 
 // GET all transactions (global access)
@@ -59,11 +56,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    console.log('Received transaction data:', body);
     const { clientId, stockId, type, lots, price, date, brokerId, buyTransactionId, notes } = body;
 
     // Validate required fields
-    if (!clientId || !stockId || !type || lots === undefined || lots === null || price === undefined || price === null || !date) {
+    if (!clientId || !stockId || !type || lots == null || price == null || !date) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }

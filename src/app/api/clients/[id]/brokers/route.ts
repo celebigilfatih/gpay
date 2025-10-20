@@ -7,41 +7,39 @@ import { prisma } from "@/lib/prisma";
 // GET - Belirli bir müşteriye kayıtlı aracı kurumları getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log("[CLIENT BROKERS API] GET request received for client:", params.id);
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const clientId = params.id;
-    console.log("[CLIENT BROKERS API] Using clientId:", clientId);
+    const { id: clientId } = await params;
 
-    // Müşteriye kayıtlı aracı kurumları getir
-    console.log("[CLIENT BROKERS API] Querying clientBrokers with clientId:", clientId);
-    
-    // Önce tüm aracı kurumları getir
-    const allBrokers = await prisma.broker.findMany();
-    console.log("[CLIENT BROKERS API] All brokers:", allBrokers);
-    
-    // Sonra müşteriye ait aracı kurumları getir
+    // Tüm aracı kurumları getir
+    const allBrokers = await prisma.broker.findMany({
+      orderBy: {
+        name: 'asc'
+      }
+    });
+
+    // Bu müşterinin aracı kurumlarını getir
     const clientBrokers = await prisma.clientBroker.findMany({
       where: {
-        clientId: clientId,
+        clientId: clientId
       },
       include: {
         broker: true
-      },
-      orderBy: {
-        broker: {
-          name: "asc"
-        }
       }
     });
-    
-    console.log("[CLIENT BROKERS API] Found client brokers:", clientBrokers);
 
-    // Sadece broker bilgilerini döndür
-    const brokers = clientBrokers.map(cb => cb.broker);
-    console.log("[CLIENT BROKERS API] Returning brokers:", brokers);
+    // Aracı kurumları işaretle (müşteriye ait olanları selected: true)
+    const brokers = allBrokers.map(broker => ({
+      id: broker.id,
+      name: broker.name,
+      selected: clientBrokers.some(cb => cb.brokerId === broker.id)
+    }));
 
     return NextResponse.json(brokers);
   } catch (error) {
@@ -56,16 +54,15 @@ export async function GET(
 // POST - Müşteriye yeni aracı kurum ekle
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Oturum kontrolünü geçici olarak kaldır
-    // const session = await getServerSession(authOptions) as Session | null;
-    // if (!session || !session.user) {
-    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // }
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const clientId = params.id;
+    const { id: clientId } = await params;
     const body = await request.json();
     const { brokerId } = body;
 

@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useForm } from "react-hook-form";
+import { useForm, Control } from "react-hook-form";
+import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import Link from "next/link";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -77,36 +77,19 @@ export default function NewTransactionPage() {
   const [buyTransactions, setBuyTransactions] = useState<BuyTransaction[]>([]);
   const [clientPositions, setClientPositions] = useState<ClientPosition[]>([]);
   const [selectedType, setSelectedType] = useState<"BUY" | "SELL">("BUY");
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
 
-  // Dynamic schema based on selected stock and type
-  const createTransactionSchema = (selectedStockId?: string, selectedType?: string) => {
-    return baseTransactionSchema.refine((data) => {
-      if (data.type === "SELL" && selectedStockId) {
-        const selectedStock = clientPositions.find(pos => pos.stockId === selectedStockId);
-        if (!selectedStock) {
-          return false;
-        }
-        if (data.lots > selectedStock.availableLots) {
-          return false;
-        }
-      }
-      return true;
-    }, {
-      message: "Yetersiz lot! Mevcut lot sayınızdan fazla satış yapamazsınız.",
-      path: ["lots"]
-    });
-  };
+
 
   const form = useForm({
     resolver: zodResolver(baseTransactionSchema),
     defaultValues: {
-      type: "BUY",
-      lots: undefined,
-      price: undefined,
+      stockId: "",
+      type: "BUY" as const,
+      lots: 0,
+      price: 0,
       date: new Date().toISOString().split("T")[0],
       brokerId: "",
       buyTransactionId: "",
@@ -115,9 +98,7 @@ export default function NewTransactionPage() {
   });
 
   const selectedStockId = form.watch("stockId");
-  const watchedType = form.watch("type");
   const selectedBuyTransactionId = form.watch("buyTransactionId");
-  const transactionSchema = createTransactionSchema(selectedStockId, watchedType);
 
   // Seçilen alış işlemine göre aracı kurum bilgisini otomatik doldur
   useEffect(() => {
@@ -129,29 +110,7 @@ export default function NewTransactionPage() {
     }
   }, [selectedBuyTransactionId, buyTransactions, form]);
 
-  // Dinamik schema değişikliklerini form'a uygula
-  useEffect(() => {
-    const newSchema = createTransactionSchema(selectedStockId, watchedType);
-    // Form resolver'ını güncelle - bu React Hook Form'da desteklenmediği için
-    // validation'ı onSubmit'te manuel olarak yapacağız
-  }, [selectedStockId, watchedType]);
-
-  useEffect(() => {
-    console.log("[CLIENT] useEffect triggered, status:", status);
-    if (status === "unauthenticated") {
-      console.log("[CLIENT] Redirecting to login");
-      router.push("/login");
-    }
-
-    // Test için session kontrolünü geçici olarak devre dışı bırak
-    if (status === "authenticated" || status === "loading") {
-      console.log("[CLIENT] Calling fetchData");
-      fetchData();
-    }
-  }, [status, clientId, router]);
-
-  const fetchData = async () => {
-    console.log("[CLIENT] fetchData started");
+  const fetchData = useCallback(async () => {
     try {
       // Fetch client details
       const clientResponse = await fetch(`/api/clients/${clientId}`, {
@@ -171,59 +130,63 @@ export default function NewTransactionPage() {
       const stocksData = await stocksResponse.json();
       setStocks(stocksData);
 
-      // Fetch client-specific brokers
-      console.log("[CLIENT] Fetching client-specific brokers...");
-      const brokersResponse = await fetch(`/api/clients/${clientId}/brokers`, {
-        credentials: 'include'
-      });
+      // Fetch brokers
+      const brokersResponse = await fetch("/api/brokers");
       if (!brokersResponse.ok) {
-        throw new Error("Failed to fetch client brokers");
+        throw new Error("Failed to fetch brokers");
       }
       const brokersData = await brokersResponse.json();
-      console.log("[CLIENT] Client-specific brokers data received:", brokersData);
       setBrokers(brokersData);
 
-      // Fetch buy transactions for this client (for sell reference)
-      const buyTransactionsResponse = await fetch(`/api/clients/${clientId}/transactions?type=BUY`, {
-        credentials: 'include'
-      });
+      // Fetch client positions
+      const positionsResponse = await fetch(`/api/clients/${clientId}/positions`);
+      if (!positionsResponse.ok) {
+        throw new Error("Failed to fetch positions");
+      }
+      const positionsData = await positionsResponse.json();
+      setClientPositions(positionsData);
+
+      // Fetch buy transactions for SELL operations
+      const buyTransactionsResponse = await fetch(`/api/clients/${clientId}/buy-transactions`);
       if (!buyTransactionsResponse.ok) {
         throw new Error("Failed to fetch buy transactions");
       }
       const buyTransactionsData = await buyTransactionsResponse.json();
       setBuyTransactions(buyTransactionsData);
 
-      // Fetch client positions
-      const positionsResponse = await fetch(`/api/clients/${clientId}/positions`, {
-        credentials: 'include'
-      });
-      if (!positionsResponse.ok) {
-        throw new Error("Failed to fetch client positions");
-      }
-      const positionsData = await positionsResponse.json();
-      setClientPositions(positionsData);
     } catch (error) {
       console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
+      alert("Veri yüklenirken hata oluştu: " + (error as Error).message);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    if (status === "loading") {
+      return;
+    }
+
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    if (status === "authenticated") {
+      fetchData();
+    }
+  }, [status, router, fetchData]);
 
   const onSubmit = async (data: TransactionFormValues) => {
     if (!client) return;
     
-    // Dinamik schema ile validation yap
-    const currentSchema = createTransactionSchema(data.stockId, data.type);
-    const validationResult = currentSchema.safeParse(data);
-    
-    if (!validationResult.success) {
-      // Form hatalarını göster
-      validationResult.error.errors.forEach(error => {
-        form.setError(error.path[0] as keyof TransactionFormValues, {
-          message: error.message
+    // Basic validation for SELL transactions
+    if (data.type === "SELL" && data.stockId) {
+      const selectedPosition = clientPositions.find(pos => pos.stockId === data.stockId);
+      if (selectedPosition && data.lots > selectedPosition.availableLots) {
+        form.setError("lots", {
+          message: "Yetersiz lot! Mevcut lot sayınızdan fazla satış yapamazsınız."
         });
-      });
-      return;
+        return;
+      }
     }
     
     setSubmitting(true);
@@ -259,7 +222,7 @@ export default function NewTransactionPage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading") {
     return (
       <>
         <Navbar />
@@ -376,7 +339,7 @@ export default function NewTransactionPage() {
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={form.control as unknown as Control<TransactionFormValues>}
                   name="stockId"
                   render={({ field }) => (
                     <FormItem>
@@ -401,7 +364,7 @@ export default function NewTransactionPage() {
 
                 {selectedType === "SELL" && buyTransactions.length > 0 && (
                   <FormField
-                    control={form.control}
+                    control={form.control as unknown as Control<TransactionFormValues>}
                     name="buyTransactionId"
                     render={({ field }) => (
                       <FormItem>
@@ -455,11 +418,11 @@ export default function NewTransactionPage() {
                   <FormField
                     control={form.control}
                     name="lots"
-                    render={({ field, fieldState }) => {
+                    render={({ field }) => {
                       const selectedStockId = form.watch("stockId");
                       const selectedPosition = clientPositions.find(pos => pos.stockId === selectedStockId);
                       const availableLots = selectedPosition?.availableLots || 0;
-                      const currentLots = field.value || 0;
+                      const currentLots = Number(field.value) || 0;
                       const isOverLimit = selectedType === "SELL" && selectedStockId && currentLots > availableLots;
                       
                       return (
@@ -503,7 +466,7 @@ export default function NewTransactionPage() {
                   />
 
                   <FormField
-                    control={form.control}
+                    control={form.control as unknown as Control<TransactionFormValues>}
                     name="price"
                     render={({ field }) => (
                       <FormItem>
@@ -527,7 +490,7 @@ export default function NewTransactionPage() {
                 </div>
 
                 <FormField
-                  control={form.control}
+                  control={form.control as unknown as Control<TransactionFormValues>}
                   name="date"
                   render={({ field }) => (
                     <FormItem>
@@ -559,14 +522,14 @@ export default function NewTransactionPage() {
                     type="submit" 
                     disabled={submitting || (selectedType === "SELL" && selectedStockId && (() => {
                       const selectedStock = clientPositions.find(pos => pos.stockId === selectedStockId);
-                      const currentLots = form.watch("lots") || 0;
-                      return selectedStock && currentLots > selectedStock.availableLots;
-                    })())}
+                      const currentLots = Number(form.watch("lots")) || 0;
+                      return selectedStock ? currentLots > selectedStock.availableLots : false;
+                    })()) || false}
                     className={
                       selectedType === "SELL" && selectedStockId && (() => {
                         const selectedStock = clientPositions.find(pos => pos.stockId === selectedStockId);
-                        const currentLots = form.watch("lots") || 0;
-                        return selectedStock && currentLots > selectedStock.availableLots;
+                        const currentLots = Number(form.watch("lots")) || 0;
+                        return selectedStock ? currentLots > selectedStock.availableLots : false;
                       })() 
                         ? "bg-red-500 hover:bg-red-600 cursor-not-allowed" 
                         : ""

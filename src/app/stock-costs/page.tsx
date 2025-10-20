@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -162,32 +162,6 @@ export default function StockCostsPage() {
     setSortConfig({ key, direction });
   };
 
-  // Sıralanmış veriyi al
-  const getSortedData = (): FlattenedRow[] => {
-    const data = flattenData();
-    
-    if (!sortConfig) {
-      return data;
-    }
-    
-    return [...data].sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        const comparison = aValue.localeCompare(bValue, 'tr-TR');
-        return sortConfig.direction === 'asc' ? comparison : -comparison;
-      }
-      
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        const comparison = aValue - bValue;
-        return sortConfig.direction === 'asc' ? comparison : -comparison;
-      }
-      
-      return 0;
-    });
-  };
-
   // Filtrelenmiş ve sıralanmış veriyi al
   const getFilteredAndSortedData = (): FlattenedRow[] => {
     const data = flattenData();
@@ -339,7 +313,7 @@ export default function StockCostsPage() {
               disabled={stockCosts.length === 0}
             >
               <Download className="h-4 w-4" />
-              Excel'e Aktar
+              Excel&apos;e Aktar
             </Button>
           </div>
         </div>

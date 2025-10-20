@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
-import { MultiSelect } from "@/components/ui/multi-select";
 import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
 
 type Broker = {
@@ -116,7 +115,7 @@ type FormData = {
 
 export default function NewClientPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [selectedBrokers, setSelectedBrokers] = useState<string[]>([]);
@@ -274,7 +273,7 @@ export default function NewClientPage() {
                 />
                 {userBrokers.length === 0 && (
                   <p className="text-sm text-gray-500">
-                    Aracı kurum seçebilmek için önce "Aracı Kurumlarım" sayfasından aracı kurum eklemelisiniz.
+                    Aracı kurum seçebilmek için önce &quot;Aracı Kurumlarım&quot; sayfasından aracı kurum eklemelisiniz.
                   </p>
                 )}
               </div>
@@ -294,8 +293,8 @@ export default function NewClientPage() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full cursor-pointer">
-                Müşteri Ekle
+              <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
+                {isSubmitting ? "Ekleniyor..." : "Müşteri Ekle"}
               </Button>
             </form>
           </CardContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
@@ -10,7 +10,6 @@ import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -63,6 +62,7 @@ type BuyTransaction = {
   price: number;
   lots: number;
   stock: {
+    id: string;
     symbol: string;
   };
 };
@@ -89,7 +89,7 @@ export default function EditTransactionPage() {
   const [buyTransactions, setBuyTransactions] = useState<BuyTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
 
   const form = useForm<TransactionFormValues>({
@@ -109,17 +109,7 @@ export default function EditTransactionPage() {
 
   const selectedType = form.watch("type");
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-
-    if (status === "authenticated") {
-      fetchData();
-    }
-  }, [status, transactionId, router]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // Fetch transaction data
       const transactionResponse = await fetch(`/api/transactions/${transactionId}`);
@@ -158,7 +148,7 @@ export default function EditTransactionPage() {
           const buyTransactionsData = await buyTransactionsResponse.json();
           // Filter for the same stock
           const sameBuyTransactions = buyTransactionsData.filter(
-            (t: any) => t.stock.id === transactionData.stock.id
+            (t: BuyTransaction) => t.stock.id === transactionData.stock.id
           );
           setBuyTransactions(sameBuyTransactions);
         }
@@ -168,7 +158,22 @@ export default function EditTransactionPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [transactionId, form]);
+
+  useEffect(() => {
+    if (status === "loading") {
+      return;
+    }
+
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    if (status === "authenticated") {
+      fetchData();
+    }
+  }, [status, transactionId, router, fetchData]);
 
   const onSubmit = async (values: TransactionFormValues) => {
     setSubmitting(true);

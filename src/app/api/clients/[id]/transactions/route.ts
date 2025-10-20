@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../../auth/[...nextauth]/options";
-import type { Session } from "next-auth";
 import { TransactionType } from "@prisma/client";
 
 // GET transactions for a specific client (global access)

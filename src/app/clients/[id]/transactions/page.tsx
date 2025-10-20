@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/layout/navbar";
@@ -75,7 +75,7 @@ export default function ClientTransactionsPage() {
   const params = useParams();
   const clientId = params.id as string;
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [client, setClient] = useState<Client | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [collectionData, setCollectionData] = useState<CollectionData | null>(null);
@@ -85,17 +85,7 @@ export default function ClientTransactionsPage() {
   const [paymentDeleteDialogOpen, setPaymentDeleteDialogOpen] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-
-    if (status === "authenticated") {
-      fetchClientData();
-    }
-  }, [status, clientId, router]);
-
-  const fetchClientData = async () => {
+  const fetchClientData = useCallback(async () => {
     try {
       // Fetch client details with credentials included for cookie-based auth
       const clientResponse = await fetch(`/api/clients/${clientId}`, {
@@ -138,7 +128,7 @@ export default function ClientTransactionsPage() {
           .filter((t: Transaction) => t.commission !== null)
           .reduce((sum: number, t: Transaction) => sum + (t.commission || 0), 0);
         
-        const totalPayments = paymentsData.reduce((sum: number, p: any) => sum + p.amount, 0);
+        const totalPayments = paymentsData.reduce((sum: number, p: Payment) => sum + p.amount, 0);
         const remainingBalance = totalCommission - totalPayments;
         
         setCollectionData({
@@ -154,7 +144,17 @@ export default function ClientTransactionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+
+    if (status === "authenticated") {
+      fetchClientData();
+    }
+  }, [status, clientId, router, fetchClientData]);
 
   const handleDeleteTransaction = async (transactionId: string) => {
     try {
