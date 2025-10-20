@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, BarChart3, TrendingUp, DollarSign, CreditCard, Activity } from "lucide-react";
 import Link from "next/link";
 
 type Client = {
@@ -314,44 +314,73 @@ export default function ClientTransactionsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Toplam İşlem</CardTitle>
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-300">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-blue-700">Toplam İşlem</CardTitle>
+                <div className="p-2 bg-blue-200 rounded-lg">
+                  <BarChart3 className="h-4 w-4 text-blue-600" />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{transactions.length}</p>
+              <p className="text-3xl font-bold text-blue-800">{transactions.length}</p>
+              <p className="text-xs text-blue-600 mt-1">Toplam işlem sayısı</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Toplam Kar</CardTitle>
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all duration-300">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-green-700">Toplam Kar</CardTitle>
+                <div className="p-2 bg-green-200 rounded-lg">
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-green-600">{totalProfit.toLocaleString('tr-TR')} ₺</p>
+              <p className="text-3xl font-bold text-green-800">{totalProfit.toLocaleString('tr-TR')} ₺</p>
+              <p className="text-xs text-green-600 mt-1">Net kar tutarı</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Toplam Komisyon</CardTitle>
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all duration-300">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-purple-700">Toplam Komisyon</CardTitle>
+                <div className="p-2 bg-purple-200 rounded-lg">
+                  <DollarSign className="h-4 w-4 text-purple-600" />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-blue-600">{totalCommission.toLocaleString('tr-TR')} ₺</p>
+              <p className="text-3xl font-bold text-purple-800">{totalCommission.toLocaleString('tr-TR')} ₺</p>
+              <p className="text-xs text-purple-600 mt-1">Toplam komisyon</p>
             </CardContent>
           </Card>
           {collectionData && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Tahsilat Durumu</CardTitle>
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 hover:shadow-lg transition-all duration-300">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-orange-700">Tahsilat Durumu</CardTitle>
+                  <div className="p-2 bg-orange-200 rounded-lg">
+                    <CreditCard className="h-4 w-4 text-orange-600" />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span>Toplam Ödeme:</span>
-                    <span className="font-medium text-green-600">₺{collectionData.totalPayments.toLocaleString('tr-TR')}</span>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-2 bg-white/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-3 w-3 text-orange-600" />
+                      <span className="text-sm text-orange-700 font-medium">Toplam Ödeme:</span>
+                    </div>
+                    <span className="text-sm font-bold text-orange-800">₺{collectionData.totalPayments.toLocaleString('tr-TR')}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Kalan Bakiye:</span>
-                    <span className={`font-medium ${collectionData.remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <div className="flex items-center justify-between p-2 bg-white/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-3 w-3 text-orange-600" />
+                      <span className="text-sm text-orange-700 font-medium">Kalan Bakiye:</span>
+                    </div>
+                    <span className={`text-sm font-bold ${collectionData.remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                       ₺{collectionData.remainingBalance.toLocaleString('tr-TR')}
                     </span>
                   </div>

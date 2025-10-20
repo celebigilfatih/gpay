@@ -132,3 +132,96 @@ export async function POST(
     );
   }
 }
+
+// PUT - Müşterinin aracı kurumlarını güncelle
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: clientId } = await params;
+    const body = await request.json();
+    const { brokerIds } = body;
+
+    if (!Array.isArray(brokerIds)) {
+      return NextResponse.json(
+        { error: "Broker IDs must be an array" },
+        { status: 400 }
+      );
+    }
+
+    // Müşterinin varlığını kontrol et
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+    });
+
+    if (!client) {
+      return NextResponse.json(
+        { error: "Client not found" },
+        { status: 404 }
+      );
+    }
+
+    // Kullanıcının bu müşteriyi düzenleme yetkisi var mı kontrol et
+    if (client.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Mevcut tüm client-broker ilişkilerini sil
+    await prisma.clientBroker.deleteMany({
+      where: {
+        clientId: clientId
+      }
+    });
+
+    // Yeni ilişkileri oluştur
+    if (brokerIds.length > 0) {
+      // Broker ID'lerin geçerli olduğunu kontrol et
+      const validBrokers = await prisma.broker.findMany({
+        where: {
+          id: {
+            in: brokerIds
+          }
+        }
+      });
+
+      const validBrokerIds = validBrokers.map(b => b.id);
+
+      if (validBrokerIds.length > 0) {
+        await prisma.clientBroker.createMany({
+          data: validBrokerIds.map(brokerId => ({
+            clientId: clientId,
+            brokerId: brokerId
+          }))
+        });
+      }
+    }
+
+    // Güncellenmiş aracı kurum listesini döndür
+    const updatedClientBrokers = await prisma.clientBroker.findMany({
+      where: {
+        clientId: clientId
+      },
+      include: {
+        broker: true
+      }
+    });
+
+    const brokers = updatedClientBrokers.map(cb => cb.broker);
+    return NextResponse.json(brokers);
+  } catch (error) {
+    console.error("Error updating client brokers:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

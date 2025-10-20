@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MultiSelect } from "@/components/ui/multi-select";
 import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
+import { User, Phone, Building2, MapPin, Edit, Save, X } from "lucide-react";
 
 // Broker ve UserBroker tipleri
 type Broker = {
@@ -127,6 +128,7 @@ export default function ClientDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [allBrokers, setAllBrokers] = useState<Broker[]>([]);
+  const [clientBrokers, setClientBrokers] = useState<string[]>([]);
   const { status } = useSession();
   const router = useRouter();
   
@@ -149,6 +151,26 @@ export default function ClientDetailPage() {
       console.error('Error fetching all brokers:', error);
     }
   }, []);
+
+  const fetchClientBrokers = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/clients/${clientId}/brokers`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch client brokers');
+      }
+      const data = await response.json();
+      // Sadece seçili aracı kurumların ID'lerini al
+      const selectedBrokerIds = data.filter((broker: any) => broker.selected).map((broker: any) => broker.id);
+      setClientBrokers(selectedBrokerIds);
+    } catch (error) {
+      console.error('Error fetching client brokers:', error);
+    }
+  }, [clientId]);
 
   const fetchClient = useCallback(async () => {
     try {
@@ -178,34 +200,42 @@ export default function ClientDetailPage() {
     if (status === "authenticated") {
       fetchClient();
       fetchAllBrokers();
+      fetchClientBrokers();
     }
-  }, [status, clientId, router, fetchClient, fetchAllBrokers]);
+  }, [status, clientId, router, fetchClient, fetchAllBrokers, fetchClientBrokers]);
 
-  // allBrokers yüklendikten sonra form'u yeniden reset et
+  // client ve clientBrokers yüklendikten sonra form'u yeniden reset et
   useEffect(() => {
-    if (client && allBrokers.length > 0) {
-      const brokerValues = client.brokerageFirm ? 
-        client.brokerageFirm.split(',').map((firm: string) => {
-          const trimmedFirm = firm.trim();
-          const broker = allBrokers.find(b => b.name === trimmedFirm);
-          return broker ? broker.id : null;
-        }).filter((id): id is string => id !== null && id.trim() !== '') : [];
-      
+    if (client && clientBrokers.length >= 0) {
       const cityValue = citiesList.find(c => c.label === client.city)?.value || client.city;
       
       reset({
         fullName: client.fullName,
         phoneNumber: client.phoneNumber,
-        brokerageFirm: brokerValues,
+        brokerageFirm: clientBrokers,
         city: cityValue
       });
     }
-  }, [client, allBrokers, reset]);
+  }, [client, clientBrokers, reset]);
 
   const onSubmit = async (data: FormData) => {
     setSaving(true);
     try {
-      // Value'ları label'lara dönüştür
+      // Aracı kurum değişikliklerini kaydet
+      const brokerResponse = await fetch(`/api/clients/${clientId}/brokers`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ brokerIds: data.brokerageFirm })
+      });
+
+      if (!brokerResponse.ok) {
+        throw new Error("Failed to update client brokers");
+      }
+
+      // Diğer müşteri bilgilerini kaydet
       const brokerLabels = Array.isArray(data.brokerageFirm) ? 
         data.brokerageFirm.map(brokerId => {
           const broker = allBrokers.find(b => b.id === brokerId);
@@ -215,7 +245,8 @@ export default function ClientDetailPage() {
       const cityLabel = citiesList.find(c => c.value === data.city)?.label || data.city;
       
       const submitData = {
-        ...data,
+        fullName: data.fullName,
+        phoneNumber: data.phoneNumber,
         brokerageFirm: brokerLabels,
         city: cityLabel
       };
@@ -235,6 +266,8 @@ export default function ClientDetailPage() {
 
       const updatedClient = await response.json();
       setClient(updatedClient);
+      // Aracı kurum listesini yeniden yükle
+      await fetchClientBrokers();
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating client:", error);
@@ -246,20 +279,13 @@ export default function ClientDetailPage() {
 
   const handleCancel = () => {
     setIsEditing(false);
-    if (client) {
-      // Dropdown'lar için value'ları bul
-      const brokerValues = client.brokerageFirm ? 
-        client.brokerageFirm.split(',').map((firm: string) => {
-          const trimmedFirm = firm.trim();
-          const broker = allBrokers.find(b => b.name === trimmedFirm);
-          return broker ? broker.id : null;
-        }).filter((id): id is string => id !== null && id.trim() !== '') : [];
+    if (client && clientBrokers.length >= 0) {
       const cityValue = citiesList.find(c => c.label === client.city)?.value || client.city;
       
       reset({
         fullName: client.fullName,
         phoneNumber: client.phoneNumber,
-        brokerageFirm: brokerValues,
+        brokerageFirm: clientBrokers,
         city: cityValue
       });
     }
@@ -310,49 +336,81 @@ export default function ClientDetailPage() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
             <div className="flex justify-between items-center">
-              <CardTitle>Müşteri Bilgileri</CardTitle>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <User className="h-5 w-5 text-blue-600" />
+                </div>
+                <CardTitle className="text-xl text-gray-800">Müşteri Bilgileri</CardTitle>
+              </div>
               {!isEditing ? (
-                <Button onClick={() => setIsEditing(true)}>Düzenle</Button>
+                <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
+                  <Edit className="h-4 w-4" />
+                  Düzenle
+                </Button>
               ) : (
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
                     onClick={handleCancel}
                     disabled={saving}
+                    className="flex items-center gap-2"
                   >
+                    <X className="h-4 w-4" />
                     İptal
                   </Button>
                   <Button 
                     onClick={handleSubmit(onSubmit)}
                     disabled={saving}
+                    className="flex items-center gap-2"
                   >
+                    <Save className="h-4 w-4" />
                     {saving ? "Kaydediliyor..." : "Kaydet"}
                   </Button>
                 </div>
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             {!isEditing ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Ad Soyad</Label>
-                  <p className="text-lg">{client.fullName}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <User className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Ad Soyad</Label>
+                    <p className="text-lg font-semibold text-gray-800 mt-1">{client.fullName}</p>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Telefon</Label>
-                  <p className="text-lg">{client.phoneNumber}</p>
+                <div className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Phone className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Telefon</Label>
+                    <p className="text-lg font-semibold text-gray-800 mt-1">{client.phoneNumber}</p>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Aracı Kurum</Label>
-                  <p className="text-lg">{client.brokerageFirm}</p>
+                <div className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Building2 className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Aracı Kurum</Label>
+                    <p className="text-lg font-semibold text-gray-800 mt-1">{client.brokerageFirm}</p>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Şehir</Label>
-                  <p className="text-lg">{client.city}</p>
+                <div className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <MapPin className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Şehir</Label>
+                    <p className="text-lg font-semibold text-gray-800 mt-1">{client.city}</p>
+                  </div>
                 </div>
               </div>
             ) : (

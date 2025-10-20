@@ -130,13 +130,15 @@ export default function NewTransactionPage() {
       const stocksData = await stocksResponse.json();
       setStocks(stocksData);
 
-      // Fetch brokers
-      const brokersResponse = await fetch("/api/brokers");
+      // Fetch client brokers
+      const brokersResponse = await fetch(`/api/clients/${clientId}/brokers`);
       if (!brokersResponse.ok) {
-        throw new Error("Failed to fetch brokers");
+        throw new Error("Failed to fetch client brokers");
       }
       const brokersData = await brokersResponse.json();
-      setBrokers(brokersData);
+      // Filter only selected brokers (client's brokers)
+      const clientBrokers = brokersData.filter((broker: any) => broker.selected);
+      setBrokers(clientBrokers);
 
       // Fetch client positions
       const positionsResponse = await fetch(`/api/clients/${clientId}/positions`);

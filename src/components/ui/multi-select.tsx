@@ -45,11 +45,10 @@ export function MultiSelect({
   const [open, setOpen] = React.useState(false);
 
   const handleSelect = (value: string) => {
-    if (selected.includes(value)) {
-      onChange(selected.filter((item) => item !== value));
-    } else {
-      onChange([...selected, value]);
-    }
+    const newSelected = selected.includes(value)
+      ? selected.filter((item) => item !== value)
+      : [...selected, value];
+    onChange(newSelected);
   };
 
   const handleRemove = (value: string) => {
@@ -102,19 +101,14 @@ export function MultiSelect({
           <CommandEmpty>{emptyMessage}</CommandEmpty>
           <CommandGroup className="max-h-64 overflow-auto">
             {options.map((option) => (
-              <CommandItem
+              <div
                 key={option.value}
-                value={option.label}
-                onSelect={(currentValue) => {
-                  // CommandItem otomatik olarak label'ı lowercase yapar, bu yüzden orijinal value'yu bulmalıyız
-                  const selectedOption = options.find(opt => 
-                    opt.label.toLowerCase() === currentValue.toLowerCase()
-                  );
-                  if (selectedOption) {
-                    handleSelect(selectedOption.value);
-                  }
+                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSelect(option.value);
                 }}
-                className="cursor-pointer"
               >
                 <div
                   className={cn(
@@ -123,22 +117,13 @@ export function MultiSelect({
                       ? "bg-primary text-primary-foreground"
                       : "opacity-50"
                   )}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSelect(option.value);
-                  }}
                 >
                   {selected.includes(option.value) && (
                     <Check className="h-3 w-3" />
                   )}
                 </div>
-                <span onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleSelect(option.value);
-                }}>{option.label}</span>
-              </CommandItem>
+                <span>{option.label}</span>
+              </div>
             ))}
           </CommandGroup>
         </Command>
