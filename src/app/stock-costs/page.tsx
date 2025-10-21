@@ -17,7 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowUpDown, ArrowUp, ArrowDown, Download, Search, X } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, X, Download } from "lucide-react";
+import * as XLSX from 'xlsx';
 
 type Client = {
   id: string;
@@ -217,46 +218,28 @@ export default function StockCostsPage() {
     });
   };
 
-  // Excel export fonksiyonu
-  const exportToExcel = () => {
+  // Excel export fonksiyonu - Hisse bazlı maliyet verileri
+  const exportStockCostsToExcel = () => {
     const data = getFilteredAndSortedData();
-    const headers = [
-      'Hisse Kodu',
-      'Hisse Adı', 
-      'Müşteri',
-      'Aracı Kurum',
-      'Alış Lot Adedi',
-      'Alış Fiyatı',
-      'Alış Maliyeti',
-      'Net Lot'
-    ];
+    const worksheet = XLSX.utils.json_to_sheet(data.map(row => ({
+      'Hisse Kodu': row.stockSymbol,
+      'Hisse Adı': row.stockName,
+      'Müşteri': row.clientName,
+      'Aracı Kurum': row.brokerName,
+      'Alış Lot Adedi': row.lots,
+      'Alış Fiyatı': row.price.toFixed(2),
+      'Alış Maliyeti': row.totalCost.toFixed(2),
+      'Net Lot': row.netLots
+    })));
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Hisse Maliyetleri');
     
-    let csvContent = '\uFEFF' + headers.join(',') + '\n'; // UTF-8 BOM eklendi
-    
-    data.forEach(row => {
-      const csvRow = [
-        row.stockSymbol,
-        `"${row.stockName}"`,
-        `"${row.clientName}"`,
-        `"${row.brokerName}"`,
-        row.lots,
-        row.price.toFixed(2),
-        row.totalCost.toFixed(2),
-        row.netLots
-      ].join(',');
-      csvContent += csvRow + '\n';
-    });
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `hisse-maliyetleri-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const fileName = `hisse-maliyetleri-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
+
+
 
   // Sıralama ikonu
   const getSortIcon = (key: keyof FlattenedRow) => {
@@ -300,22 +283,10 @@ export default function StockCostsPage() {
       <Navbar />
       <div className="container mx-auto p-6">
         <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Hisse Bazlı Müşteri Maliyetleri</h1>
-              <p className="text-muted-foreground">
-                Müşterilerinizin hisse senetlerindeki pozisyonlarını ve maliyetlerini görüntüleyin.
-              </p>
-            </div>
-            <Button 
-              onClick={exportToExcel}
-              className="flex items-center gap-2"
-              disabled={stockCosts.length === 0}
-            >
-              <Download className="h-4 w-4" />
-              Excel&apos;e Aktar
-            </Button>
-          </div>
+          <h1 className="text-3xl font-bold tracking-tight">Hisse Bazlı Müşteri Maliyetleri</h1>
+          <p className="text-muted-foreground">
+            Müşterilerinizin hisse senetlerindeki pozisyonlarını ve maliyetlerini görüntüleyin.
+          </p>
         </div>
 
         {stockCosts.length === 0 ? (
@@ -330,15 +301,26 @@ export default function StockCostsPage() {
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Filtreler</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="flex items-center gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Temizle
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={exportStockCostsToExcel}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Excel İndir
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="flex items-center gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Temizle
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">

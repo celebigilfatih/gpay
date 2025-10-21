@@ -1,19 +1,58 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import type { Session } from "next-auth";
 
-// GET all clients (global access)
-export async function GET() {
+// GET all clients (global access) with search and pagination
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search") || "";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
+
+    // Build where clause for search
+    const whereClause = search
+      ? {
+          OR: [
+            { fullName: { contains: search, mode: "insensitive" as const } },
+            { phoneNumber: { contains: search, mode: "insensitive" as const } },
+            { brokerageFirm: { contains: search, mode: "insensitive" as const } },
+            { city: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : {};
+
+    // Get total count for pagination
+    const totalCount = await prisma.client.count({
+      where: whereClause,
+    });
+
+    // Get clients with pagination
     const clients = await prisma.client.findMany({
+      where: whereClause,
       orderBy: {
         fullName: "asc",
       },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json(clients);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return NextResponse.json({
+      clients,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    });
   } catch (error) {
     console.error("Error fetching clients:", error);
     return NextResponse.json(

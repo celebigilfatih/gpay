@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, Trash2, BarChart3, TrendingUp, DollarSign, CreditCard, Activity } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Pencil, Trash2, BarChart3, TrendingUp, DollarSign, CreditCard, Activity, Filter, X } from "lucide-react";
 import Link from "next/link";
 
 type Client = {
@@ -84,6 +86,16 @@ export default function ClientTransactionsPage() {
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [paymentDeleteDialogOpen, setPaymentDeleteDialogOpen] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
+  
+  // Filter states
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    startDate: "",
+    endDate: "",
+    transactionType: "all",
+    stockSymbol: "all",
+    broker: "all"
+  });
 
   const fetchClientData = useCallback(async () => {
     try {
@@ -155,6 +167,57 @@ export default function ClientTransactionsPage() {
       fetchClientData();
     }
   }, [status, clientId, router, fetchClientData]);
+
+  // Filter functions
+  const clearFilters = () => {
+    setFilters({
+      startDate: "",
+      endDate: "",
+      transactionType: "all",
+      stockSymbol: "all",
+      broker: "all"
+    });
+  };
+
+  const filteredTransactions = transactions.filter(transaction => {
+    // Date filter
+    if (filters.startDate) {
+      const transactionDate = new Date(transaction.date);
+      const startDate = new Date(filters.startDate);
+      if (transactionDate < startDate) return false;
+    }
+    
+    if (filters.endDate) {
+      const transactionDate = new Date(transaction.date);
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59, 999); // Include the entire end date
+      if (transactionDate > endDate) return false;
+    }
+
+    // Transaction type filter
+    if (filters.transactionType !== "all" && transaction.type !== filters.transactionType) {
+      return false;
+    }
+
+    // Stock symbol filter
+    if (filters.stockSymbol !== "all" && transaction.stock.symbol !== filters.stockSymbol) {
+      return false;
+    }
+
+    // Broker filter
+    if (filters.broker !== "all") {
+      const brokerName = transaction.broker?.name || transaction.brokerageFirm || "";
+      if (brokerName !== filters.broker) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Get unique values for filter options
+  const uniqueStocks = Array.from(new Set(transactions.map(t => t.stock.symbol))).sort();
+  const uniqueBrokers = Array.from(new Set(transactions.map(t => t.broker?.name || t.brokerageFirm).filter(Boolean))).sort();
 
   const handleDeleteTransaction = async (transactionId: string) => {
     try {
@@ -251,30 +314,51 @@ export default function ClientTransactionsPage() {
     );
   }
 
-  // Calculate total profit and commission
-  const totalProfit = transactions
+  // Calculate total profit and commission using filtered transactions
+  const totalProfit = filteredTransactions
     .filter(t => t.profit !== null)
     .reduce((sum, t) => sum + (t.profit || 0), 0);
   
-  const totalCommission = transactions
+  const totalCommission = filteredTransactions
     .filter(t => t.commission !== null)
     .reduce((sum, t) => sum + (t.commission || 0), 0);
     
-  // Group transactions by stock
-  const stockSummary = transactions.reduce((acc, transaction) => {
+  // Group filtered transactions by stock
+  const stockSummary = filteredTransactions.reduce((acc, transaction) => {
     const stockSymbol = transaction.stock.symbol;
     if (!acc[stockSymbol]) {
       acc[stockSymbol] = {
         symbol: stockSymbol,
         name: transaction.stock.name,
         totalLots: 0,
+        totalCost: 0,
+        averageCost: 0,
         brokers: new Map(),
         brokerNames: []
       };
     }
     
     // Add lots (positive for BUY, negative for SELL to get net position)
-    acc[stockSymbol].totalLots += transaction.type === "BUY" ? transaction.lots : -transaction.lots;
+    const lotChange = transaction.type === "BUY" ? transaction.lots : -transaction.lots;
+    acc[stockSymbol].totalLots += lotChange;
+    
+    // Calculate cost for BUY transactions only
+    if (transaction.type === "BUY") {
+      acc[stockSymbol].totalCost += transaction.lots * transaction.price;
+    }
+    
+    // Calculate average cost (only for positive positions)
+    if (acc[stockSymbol].totalLots > 0) {
+      // Find all BUY transactions for this stock to calculate weighted average
+      const buyTransactions = filteredTransactions.filter(t => 
+        t.stock.symbol === stockSymbol && t.type === "BUY"
+      );
+      const totalBuyLots = buyTransactions.reduce((sum, t) => sum + t.lots, 0);
+      const totalBuyCost = buyTransactions.reduce((sum, t) => sum + (t.lots * t.price), 0);
+      acc[stockSymbol].averageCost = totalBuyLots > 0 ? totalBuyCost / totalBuyLots : 0;
+    } else {
+      acc[stockSymbol].averageCost = 0;
+    }
     
     // Add broker if exists
     if (transaction.broker?.name) {
@@ -285,11 +369,11 @@ export default function ClientTransactionsPage() {
       }
       // Increment broker's lot count
       const currentLots = acc[stockSymbol].brokers.get(brokerName) || 0;
-      acc[stockSymbol].brokers.set(brokerName, currentLots + (transaction.type === "BUY" ? transaction.lots : -transaction.lots));
+      acc[stockSymbol].brokers.set(brokerName, currentLots + lotChange);
     }
     
     return acc;
-  }, {} as Record<string, { symbol: string, name: string, totalLots: number, brokers: Map<string, number>, brokerNames: string[] }>);
+  }, {} as Record<string, { symbol: string, name: string, totalLots: number, totalCost: number, averageCost: number, brokers: Map<string, number>, brokerNames: string[] }>);
   
   // Convert to array for rendering
   const stockSummaryArray = Object.values(stockSummary);
@@ -314,74 +398,58 @@ export default function ClientTransactionsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-blue-700">Toplam İşlem</CardTitle>
-                <div className="p-2 bg-blue-200 rounded-lg">
-                  <BarChart3 className="h-4 w-4 text-blue-600" />
-                </div>
-              </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Toplam İşlem</CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-blue-800">{transactions.length}</p>
-              <p className="text-xs text-blue-600 mt-1">Toplam işlem sayısı</p>
+              <div className="text-2xl font-bold">{filteredTransactions.length}</div>
+              <p className="text-xs text-muted-foreground">Toplam işlem sayısı</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-green-700">Toplam Kar</CardTitle>
-                <div className="p-2 bg-green-200 rounded-lg">
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                </div>
-              </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Toplam Kar</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-green-800">{totalProfit.toLocaleString('tr-TR')} ₺</p>
-              <p className="text-xs text-green-600 mt-1">Net kar tutarı</p>
+              <div className="text-2xl font-bold">{totalProfit.toLocaleString('tr-TR')} ₺</div>
+              <p className="text-xs text-muted-foreground">Net kar tutarı</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-purple-700">Toplam Komisyon</CardTitle>
-                <div className="p-2 bg-purple-200 rounded-lg">
-                  <DollarSign className="h-4 w-4 text-purple-600" />
-                </div>
-              </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Toplam Komisyon</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-purple-800">{totalCommission.toLocaleString('tr-TR')} ₺</p>
-              <p className="text-xs text-purple-600 mt-1">Toplam komisyon</p>
+              <div className="text-2xl font-bold">{totalCommission.toLocaleString('tr-TR')} ₺</div>
+              <p className="text-xs text-muted-foreground">Toplam komisyon</p>
             </CardContent>
           </Card>
           {collectionData && (
-            <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 hover:shadow-lg transition-all duration-300">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-orange-700">Tahsilat Durumu</CardTitle>
-                  <div className="p-2 bg-orange-200 rounded-lg">
-                    <CreditCard className="h-4 w-4 text-orange-600" />
-                  </div>
-                </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Tahsilat Durumu</CardTitle>
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-2 bg-white/50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-3 w-3 text-orange-600" />
-                      <span className="text-sm text-orange-700 font-medium">Toplam Ödeme:</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <CreditCard className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Toplam Ödeme</span>
                     </div>
-                    <span className="text-sm font-bold text-orange-800">₺{collectionData.totalPayments.toLocaleString('tr-TR')}</span>
+                    <span className="text-sm font-bold">{collectionData.totalPayments.toLocaleString('tr-TR')} ₺</span>
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-white/50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-3 w-3 text-orange-600" />
-                      <span className="text-sm text-orange-700 font-medium">Kalan Bakiye:</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Activity className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Kalan Bakiye</span>
                     </div>
                     <span className={`text-sm font-bold ${collectionData.remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      ₺{collectionData.remainingBalance.toLocaleString('tr-TR')}
+                      {collectionData.remainingBalance.toLocaleString('tr-TR')} ₺
                     </span>
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
@@ -451,6 +519,15 @@ export default function ClientTransactionsPage() {
                         <span className="font-semibold text-gray-900">{stock.symbol}</span>
                         <span className="font-bold text-blue-600">{stock.totalLots} Lot</span>
                       </div>
+                      <div className="mb-3 p-2 bg-white rounded border">
+                        <div className="text-xs text-gray-600 mb-1">Ortalama Maliyet</div>
+                        <div className="font-semibold text-green-700">
+                          {stock.averageCost.toLocaleString('tr-TR', { 
+                            minimumFractionDigits: 2, 
+                            maximumFractionDigits: 2 
+                          })} ₺
+                        </div>
+                      </div>
                       <div className="space-y-1">
                         {stock.brokerNames
                           .filter(broker => (stock.brokers.get(broker) || 0) > 0) // Sadece pozitif lot sayısına sahip aracı kurumları göster
@@ -471,7 +548,108 @@ export default function ClientTransactionsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>İşlem Geçmişi</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>İşlem Geçmişi</CardTitle>
+              <div className="flex items-center gap-2">
+                {(filters.startDate !== "" || filters.endDate !== "" || filters.transactionType !== "all" || filters.stockSymbol !== "all" || filters.broker !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                    Temizle
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  Filtrele
+                  {(filters.startDate !== "" || filters.endDate !== "" || filters.transactionType !== "all" || filters.stockSymbol !== "all" || filters.broker !== "all") && (
+                    <span className="bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5 ml-1 min-w-[1.25rem] text-center">
+                      {[filters.startDate, filters.endDate, filters.transactionType !== "all" ? filters.transactionType : "", filters.stockSymbol !== "all" ? filters.stockSymbol : "", filters.broker !== "all" ? filters.broker : ""].filter(value => value !== "").length}
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </div>
+            {showFilters && (
+              <div className="mt-4 p-4 border rounded-lg bg-muted/50">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Başlangıç Tarihi</label>
+                    <Input
+                      type="date"
+                      value={filters.startDate}
+                      onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Bitiş Tarihi</label>
+                    <Input
+                      type="date"
+                      value={filters.endDate}
+                      onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">İşlem Türü</label>
+                    <Select
+                      value={filters.transactionType}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, transactionType: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tümü" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tümü</SelectItem>
+                        <SelectItem value="BUY">ALIŞ</SelectItem>
+                        <SelectItem value="SELL">SATIŞ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Hisse Senedi</label>
+                    <Select
+                      value={filters.stockSymbol}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, stockSymbol: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tümü" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tümü</SelectItem>
+                        {uniqueStocks.map(stock => (
+                          <SelectItem key={stock} value={stock}>{stock}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Aracı Kurum</label>
+                    <Select
+                      value={filters.broker}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, broker: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tümü" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tümü</SelectItem>
+                        {uniqueBrokers.map(broker => (
+                          <SelectItem key={broker} value={broker}>{broker}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {transactions.length === 0 ? (
@@ -494,7 +672,7 @@ export default function ClientTransactionsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((transaction) => (
+                  {filteredTransactions.map((transaction) => (
                     <TableRow key={transaction.id}>
                       <TableCell>{new Date(transaction.date).toLocaleDateString('tr-TR')}</TableCell>
                       <TableCell>{transaction.stock.symbol}</TableCell>

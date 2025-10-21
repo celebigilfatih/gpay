@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Download } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
+import * as XLSX from 'xlsx';
 
 type Broker = {
   id: string;
@@ -280,6 +281,60 @@ export default function BrokersPage() {
     setIsEditDialogOpen(true);
   };
 
+  const exportStockBasedLotsToExcel = () => {
+    if (stockBasedLots.length === 0) {
+      alert("Dışa aktarılacak hisse verisi bulunmuyor.");
+      return;
+    }
+
+    const data = stockBasedLots.map(stock => ({
+      'Hisse Kodu': stock.symbol,
+      'Hisse Adı': stock.name || stock.symbol,
+      'Toplam Lot': stock.totalLots
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Hisse Bazlı Toplam Lot");
+
+    const fileName = `hisse-bazli-toplam-lot-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  const exportBrokerBasedLotsToExcel = () => {
+    if (brokerBasedLots.length === 0) {
+      alert("Dışa aktarılacak aracı kurum verisi bulunmuyor.");
+      return;
+    }
+
+    const data: any[] = [];
+    
+    brokerBasedLots.forEach(broker => {
+      if (Object.keys(broker.stocks).length > 0) {
+        Object.entries(broker.stocks).forEach(([stockSymbol, stockData]) => {
+          data.push({
+            'Aracı Kurum': broker.name,
+            'Aracı Kurum Kodu': broker.code,
+            'Hisse Kodu': (stockData as {symbol: string}).symbol,
+            'Toplam Lot': (stockData as {totalLots: number}).totalLots
+          });
+        });
+      }
+    });
+
+    if (data.length === 0) {
+      alert("Dışa aktarılacak hisse verisi bulunmuyor.");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Aracı Kurum Bazlı Hisse Lot");
+
+    const fileName = `araci-kurum-bazli-hisse-lot-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   if (status === "loading" || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -456,7 +511,18 @@ export default function BrokersPage() {
                     </svg>
                   </div>
                   <div className="ml-4 flex-1">
-                    <p className="text-lg font-medium text-gray-600 mb-4">Hisse Bazlı Toplam Lot</p>
+                    <div className="flex justify-between items-center mb-4">
+                      <p className="text-lg font-medium text-gray-600">Hisse Bazlı Toplam Lot</p>
+                      <Button
+                        onClick={exportStockBasedLotsToExcel}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Excel İndir
+                      </Button>
+                    </div>
                     <div className="text-sm">
                       {stockBasedLots.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -491,7 +557,18 @@ export default function BrokersPage() {
                     </svg>
                   </div>
                   <div className="ml-4 flex-1">
-                    <p className="text-sm font-medium text-gray-600">Aracı Kurumlardaki Hisse Bazlı Toplam Lot</p>
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-sm font-medium text-gray-600">Aracı Kurumlardaki Hisse Bazlı Toplam Lot</p>
+                      <Button
+                        onClick={exportBrokerBasedLotsToExcel}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Excel İndir
+                      </Button>
+                    </div>
                     <div className="text-sm mt-4">
                       {brokerBasedLots.length > 0 ? (
                         <div className="space-y-6">

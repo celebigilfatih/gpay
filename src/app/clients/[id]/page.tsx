@@ -336,17 +336,12 @@ export default function ClientDetailPage() {
           </div>
         </div>
 
-        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+        <Card>
+          <CardHeader>
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <User className="h-5 w-5 text-blue-600" />
-                </div>
-                <CardTitle className="text-xl text-gray-800">Müşteri Bilgileri</CardTitle>
-              </div>
+              <CardTitle>Müşteri Bilgileri</CardTitle>
               {!isEditing ? (
-                <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="flex items-center gap-2">
                   <Edit className="h-4 w-4" />
                   Düzenle
                 </Button>
@@ -354,6 +349,7 @@ export default function ClientDetailPage() {
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
+                    size="sm"
                     onClick={handleCancel}
                     disabled={saving}
                     className="flex items-center gap-2"
@@ -362,6 +358,7 @@ export default function ClientDetailPage() {
                     İptal
                   </Button>
                   <Button 
+                    size="sm"
                     onClick={handleSubmit(onSubmit)}
                     disabled={saving}
                     className="flex items-center gap-2"
@@ -375,42 +372,34 @@ export default function ClientDetailPage() {
           </CardHeader>
           <CardContent className="p-6">
             {!isEditing ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <User className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Ad Soyad</Label>
-                    <p className="text-lg font-semibold text-gray-800 mt-1">{client.fullName}</p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Ad Soyad
+                  </Label>
+                  <p className="text-base">{client.fullName}</p>
                 </div>
-                <div className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Phone className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Telefon</Label>
-                    <p className="text-lg font-semibold text-gray-800 mt-1">{client.phoneNumber}</p>
-                  </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Telefon
+                  </Label>
+                  <p className="text-base">{client.phoneNumber}</p>
                 </div>
-                <div className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Building2 className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Aracı Kurum</Label>
-                    <p className="text-lg font-semibold text-gray-800 mt-1">{client.brokerageFirm}</p>
-                  </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Aracı Kurum
+                  </Label>
+                  <p className="text-base">{client.brokerageFirm}</p>
                 </div>
-                <div className="flex items-start gap-4 p-4 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <MapPin className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Şehir</Label>
-                    <p className="text-lg font-semibold text-gray-800 mt-1">{client.city}</p>
-                  </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Şehir
+                  </Label>
+                  <p className="text-base">{client.city}</p>
                 </div>
               </div>
             ) : (
