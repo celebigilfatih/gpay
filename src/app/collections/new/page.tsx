@@ -121,7 +121,7 @@ export default function NewPaymentPage() {
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link href="/collections" className="inline-flex items-center text-blue-600 hover:text-blue-800">
+          <Link href="/collections" className="inline-flex items-center text-blue-600 hover:text-blue-800 cursor-pointer">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Tahsilatlara Dön
           </Link>
@@ -142,7 +142,7 @@ export default function NewPaymentPage() {
               <div className="space-y-2">
                 <Label htmlFor="clientId">Müşteri *</Label>
                 <Select value={formData.clientId} onValueChange={handleClientChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="cursor-pointer">
                     <SelectValue placeholder="Müşteri seçin" />
                   </SelectTrigger>
                   <SelectContent>
@@ -205,7 +205,7 @@ export default function NewPaymentPage() {
               <div className="space-y-2">
                 <Label htmlFor="method">Ödeme Yöntemi</Label>
                 <Select value={formData.method} onValueChange={(value) => setFormData({ ...formData, method: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="cursor-pointer">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -230,10 +230,10 @@ export default function NewPaymentPage() {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <Button type="submit" disabled={saving || !formData.clientId || !formData.amount}>
+                <Button type="submit" disabled={saving || !formData.clientId || !formData.amount} className="cursor-pointer">
                   {saving ? 'Kaydediliyor...' : 'Ödemeyi Kaydet'}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => router.push('/collections')}>
+                <Button type="button" variant="outline" onClick={() => router.push('/collections')} className="cursor-pointer">
                   İptal
                 </Button>
               </div>

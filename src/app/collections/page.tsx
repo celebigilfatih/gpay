@@ -17,8 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Plus, Eye, TrendingUp, TrendingDown, Wallet, Users, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, Eye, TrendingUp, TrendingDown, Wallet, Users, Pencil, Trash2, Download } from 'lucide-react';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 
 interface Transaction {
   id: string;
@@ -234,6 +235,55 @@ export default function CollectionsPage() {
     }
   };
 
+  const exportCollectionsToExcel = () => {
+    if (!collections || collections.length === 0) {
+      alert('Dışa aktarılacak veri bulunamadı.');
+      return;
+    }
+
+    // Prepare data for Excel export
+    const excelData = filteredCollections.map(collection => ({
+      'Müşteri Adı': collection.client.fullName,
+      'Telefon': collection.client.phoneNumber,
+      'Toplam Komisyon': collection.totalCommission,
+      'Pozitif Komisyon': collection.positiveCommission,
+      'Negatif Komisyon': collection.negativeCommission,
+      'Toplam Ödeme': collection.totalPayments,
+      'Kalan Bakiye': collection.remainingBalance,
+      'İşlem Sayısı': collection.transactionCount,
+      'Durum': collection.remainingBalance > 0 ? 'Borçlu' : collection.remainingBalance < 0 ? 'Alacaklı' : 'Kapalı'
+    }));
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Set column widths
+    const colWidths = [
+      { wch: 25 }, // Müşteri Adı
+      { wch: 15 }, // Telefon
+      { wch: 15 }, // Toplam Komisyon
+      { wch: 15 }, // Pozitif Komisyon
+      { wch: 15 }, // Negatif Komisyon
+      { wch: 15 }, // Toplam Ödeme
+      { wch: 15 }, // Kalan Bakiye
+      { wch: 12 }, // İşlem Sayısı
+      { wch: 12 }  // Durum
+    ];
+    ws['!cols'] = colWidths;
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Tahsilat Listesi');
+
+    // Generate filename with current date
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    const filename = `tahsilat-listesi-${dateStr}.xlsx`;
+
+    // Save file
+    XLSX.writeFile(wb, filename);
+  };
+
   const filteredCollections = collections?.filter(collection =>
     collection.client.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     collection.client.phoneNumber.includes(searchTerm)
@@ -246,12 +296,18 @@ export default function CollectionsPage() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">Müşteri Tahsilat Listesi</h1>
-            <Button asChild>
-              <Link href="/collections/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Yeni Ödeme
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={exportCollectionsToExcel} variant="outline" className="cursor-pointer">
+                <Download className="mr-2 h-4 w-4" />
+                Excel'e Aktar
+              </Button>
+              <Button asChild className="cursor-pointer">
+                <Link href="/collections/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Yeni Ödeme
+                </Link>
+              </Button>
+            </div>
           </div>
 
           {/* Summary Cards */}
@@ -390,6 +446,7 @@ export default function CollectionsPage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => fetchClientPayments(collection.client.id)}
+                                    className="cursor-pointer"
                                   >
                                     <Eye className="h-4 w-4" />
                                   </Button>
@@ -534,6 +591,7 @@ export default function CollectionsPage() {
                                                         size="sm"
                                                         variant="outline"
                                                         onClick={() => handleEditPayment(payment)}
+                                                        className="cursor-pointer"
                                                       >
                                                         <Pencil className="h-4 w-4" />
                                                       </Button>
@@ -544,6 +602,7 @@ export default function CollectionsPage() {
                                                           setPaymentToDelete(payment.id);
                                                           setDeleteDialogOpen(true);
                                                         }}
+                                                        className="cursor-pointer"
                                                       >
                                                         <Trash2 className="h-4 w-4" />
                                                       </Button>
@@ -565,7 +624,7 @@ export default function CollectionsPage() {
                               </Dialog>
                               
                               {collection.remainingBalance > 0 && (
-                                <Button size="sm" variant="outline" asChild>
+                                <Button size="sm" variant="outline" asChild className="cursor-pointer">
                                   <Link href={`/collections/new?clientId=${collection.client.id}`}>
                                     <Plus className="h-4 w-4" />
                                   </Link>
@@ -648,10 +707,10 @@ export default function CollectionsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="cursor-pointer">
                 İptal
               </Button>
-              <Button onClick={handleUpdatePayment}>
+              <Button onClick={handleUpdatePayment} className="cursor-pointer">
                 Güncelle
               </Button>
             </DialogFooter>
@@ -671,14 +730,14 @@ export default function CollectionsPage() {
               <Button variant="outline" onClick={() => {
                 setDeleteDialogOpen(false);
                 setPaymentToDelete(null);
-              }}>
+              }} className="cursor-pointer">
                 İptal
               </Button>
               <Button variant="destructive" onClick={() => {
                 if (paymentToDelete) {
                   handleDeletePayment(paymentToDelete);
                 }
-              }}>
+              }} className="cursor-pointer">
                 Sil
               </Button>
             </DialogFooter>

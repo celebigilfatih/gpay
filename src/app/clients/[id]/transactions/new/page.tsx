@@ -534,7 +534,7 @@ export default function NewTransactionPage() {
                         return selectedStock ? currentLots > selectedStock.availableLots : false;
                       })() 
                         ? "bg-red-500 hover:bg-red-600 cursor-not-allowed" 
-                        : ""
+                        : "cursor-pointer"
                     }
                   >
                     {submitting ? "Kaydediliyor..." : "İşlemi Kaydet"}

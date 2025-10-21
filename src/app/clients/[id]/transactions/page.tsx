@@ -323,7 +323,7 @@ export default function ClientTransactionsPage() {
     .filter(t => t.commission !== null)
     .reduce((sum, t) => sum + (t.commission || 0), 0);
     
-  // Group filtered transactions by stock
+  // Group filtered transactions by stock and broker
   const stockSummary = filteredTransactions.reduce((acc, transaction) => {
     const stockSymbol = transaction.stock.symbol;
     if (!acc[stockSymbol]) {
@@ -334,7 +334,8 @@ export default function ClientTransactionsPage() {
         totalCost: 0,
         averageCost: 0,
         brokers: new Map(),
-        brokerNames: []
+        brokerNames: [],
+        brokerDetails: new Map() // Aracı kurum bazlı detaylar için
       };
     }
     
@@ -347,33 +348,75 @@ export default function ClientTransactionsPage() {
       acc[stockSymbol].totalCost += transaction.lots * transaction.price;
     }
     
-    // Calculate average cost (only for positive positions)
-    if (acc[stockSymbol].totalLots > 0) {
-      // Find all BUY transactions for this stock to calculate weighted average
-      const buyTransactions = filteredTransactions.filter(t => 
-        t.stock.symbol === stockSymbol && t.type === "BUY"
-      );
-      const totalBuyLots = buyTransactions.reduce((sum, t) => sum + t.lots, 0);
-      const totalBuyCost = buyTransactions.reduce((sum, t) => sum + (t.lots * t.price), 0);
-      acc[stockSymbol].averageCost = totalBuyLots > 0 ? totalBuyCost / totalBuyLots : 0;
-    } else {
-      acc[stockSymbol].averageCost = 0;
-    }
-    
     // Add broker if exists
     if (transaction.broker?.name) {
       const brokerName = transaction.broker.name;
       if (!acc[stockSymbol].brokers.has(brokerName)) {
         acc[stockSymbol].brokers.set(brokerName, 0);
         acc[stockSymbol].brokerNames.push(brokerName);
+        acc[stockSymbol].brokerDetails.set(brokerName, {
+          lots: 0,
+          totalCost: 0,
+          averageCost: 0
+        });
       }
+      
       // Increment broker's lot count
       const currentLots = acc[stockSymbol].brokers.get(brokerName) || 0;
       acc[stockSymbol].brokers.set(brokerName, currentLots + lotChange);
+      
+      // Update broker details for cost calculation
+      const brokerDetail = acc[stockSymbol].brokerDetails.get(brokerName);
+      if (brokerDetail) {
+        brokerDetail.lots += lotChange;
+        if (transaction.type === "BUY") {
+          brokerDetail.totalCost += transaction.lots * transaction.price;
+        }
+        // Calculate broker-based average cost
+        if (brokerDetail.lots > 0) {
+          // Find all BUY transactions for this stock and broker
+          const brokerBuyTransactions = filteredTransactions.filter(t => 
+            t.stock.symbol === stockSymbol && 
+            t.type === "BUY" && 
+            t.broker?.name === brokerName
+          );
+          const brokerTotalBuyLots = brokerBuyTransactions.reduce((sum, t) => sum + t.lots, 0);
+          const brokerTotalBuyCost = brokerBuyTransactions.reduce((sum, t) => sum + (t.lots * t.price), 0);
+          brokerDetail.averageCost = brokerTotalBuyLots > 0 ? brokerTotalBuyCost / brokerTotalBuyLots : 0;
+        } else {
+          brokerDetail.averageCost = 0;
+        }
+      }
+    }
+    
+    // Calculate overall average cost (weighted average of all brokers)
+    if (acc[stockSymbol].totalLots > 0) {
+      let totalWeightedCost = 0;
+      let totalPositiveLots = 0;
+      
+      acc[stockSymbol].brokerDetails.forEach((detail, brokerName) => {
+        if (detail.lots > 0) {
+          totalWeightedCost += detail.averageCost * detail.lots;
+          totalPositiveLots += detail.lots;
+        }
+      });
+      
+      acc[stockSymbol].averageCost = totalPositiveLots > 0 ? totalWeightedCost / totalPositiveLots : 0;
+    } else {
+      acc[stockSymbol].averageCost = 0;
     }
     
     return acc;
-  }, {} as Record<string, { symbol: string, name: string, totalLots: number, totalCost: number, averageCost: number, brokers: Map<string, number>, brokerNames: string[] }>);
+  }, {} as Record<string, { 
+    symbol: string, 
+    name: string, 
+    totalLots: number, 
+    totalCost: number, 
+    averageCost: number, 
+    brokers: Map<string, number>, 
+    brokerNames: string[],
+    brokerDetails: Map<string, { lots: number, totalCost: number, averageCost: number }>
+  }>);
   
   // Convert to array for rendering
   const stockSummaryArray = Object.values(stockSummary);
@@ -520,7 +563,7 @@ export default function ClientTransactionsPage() {
                         <span className="font-bold text-blue-600">{stock.totalLots} Lot</span>
                       </div>
                       <div className="mb-3 p-2 bg-white rounded border">
-                        <div className="text-xs text-gray-600 mb-1">Ortalama Maliyet</div>
+                        <div className="text-xs text-gray-600 mb-1">Genel Ortalama Maliyet</div>
                         <div className="font-semibold text-green-700">
                           {stock.averageCost.toLocaleString('tr-TR', { 
                             minimumFractionDigits: 2, 
@@ -528,15 +571,31 @@ export default function ClientTransactionsPage() {
                           })} ₺
                         </div>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         {stock.brokerNames
                           .filter(broker => (stock.brokers.get(broker) || 0) > 0) // Sadece pozitif lot sayısına sahip aracı kurumları göster
-                          .map((broker, index) => (
-                          <div key={index} className="text-xs text-gray-600 flex justify-between">
-                            <span>{broker}</span>
-                            <span className="font-medium">{stock.brokers.get(broker)} Lot</span>
-                          </div>
-                        ))}
+                          .map((broker, index) => {
+                            const brokerDetail = stock.brokerDetails.get(broker);
+                            return (
+                              <div key={index} className="bg-white rounded border p-2">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-xs font-medium text-gray-700">{broker}</span>
+                                  <span className="text-xs font-bold text-blue-600">{stock.brokers.get(broker)} Lot</span>
+                                </div>
+                                {brokerDetail && brokerDetail.lots > 0 && (
+                                  <div className="text-xs text-gray-600">
+                                    <span className="font-medium">Ortalama Maliyet: </span>
+                                    <span className="font-semibold text-green-600">
+                                      {brokerDetail.averageCost.toLocaleString('tr-TR', { 
+                                        minimumFractionDigits: 2, 
+                                        maximumFractionDigits: 2 
+                                      })} ₺
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                       </div>
                     </div>
                   ))}

@@ -9,8 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Pencil, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pencil, Trash2, Download, Filter } from "lucide-react";
 import Link from "next/link";
+import * as XLSX from 'xlsx';
 
 type Transaction = {
   id: string;
@@ -50,6 +53,13 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+  
+  // Filtering states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "BUY" | "SELL">("ALL");
+  const [dateFilter, setDateFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  
   const { status } = useSession();
   const router = useRouter();
 
@@ -115,6 +125,65 @@ export default function TransactionsPage() {
     }
   };
 
+  // Excel export function
+  const exportTransactionsToExcel = () => {
+    const exportData = filteredTransactions.map(transaction => ({
+      'Tarih': new Date(transaction.date).toLocaleDateString('tr-TR'),
+      'Müşteri': transaction.client.fullName,
+      'Hisse': transaction.stock.symbol,
+      'Hisse Adı': transaction.stock.name,
+      'İşlem Tipi': transaction.type === "BUY" ? "ALIŞ" : "SATIŞ",
+      'Lot': transaction.lots,
+      'Fiyat': transaction.price,
+      'Toplam': transaction.lots * transaction.price,
+      'Aracı Kurum': transaction.broker?.name || transaction.brokerageFirm || "-",
+      'Kar': transaction.profit || 0,
+      'Komisyon': transaction.commission || 0,
+      'Notlar': transaction.notes || "-"
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Set column widths
+    const colWidths = [
+      { wch: 12 }, // Tarih
+      { wch: 20 }, // Müşteri
+      { wch: 10 }, // Hisse
+      { wch: 25 }, // Hisse Adı
+      { wch: 12 }, // İşlem Tipi
+      { wch: 8 },  // Lot
+      { wch: 12 }, // Fiyat
+      { wch: 15 }, // Toplam
+      { wch: 20 }, // Aracı Kurum
+      { wch: 12 }, // Kar
+      { wch: 12 }, // Komisyon
+      { wch: 20 }  // Notlar
+    ];
+    ws['!cols'] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "İşlemler");
+    
+    const fileName = `islemler_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  };
+
+  // Filter transactions based on search term, type, and date
+  const filteredTransactions = transactions.filter(transaction => {
+    const matchesSearch = searchTerm === "" || 
+      transaction.client.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.stock.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.stock.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (transaction.broker?.name || transaction.brokerageFirm || "").toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = typeFilter === "ALL" || transaction.type === typeFilter;
+    
+    const matchesDate = dateFilter === "" || 
+      new Date(transaction.date).toISOString().split('T')[0] === dateFilter;
+    
+    return matchesSearch && matchesType && matchesDate;
+  });
+
   if (status === "loading" || loading) {
     return (
       <>
@@ -126,12 +195,12 @@ export default function TransactionsPage() {
     );
   }
 
-  // Calculate total profit and commission
-  const totalProfit = transactions
+  // Calculate total profit and commission from filtered transactions
+  const totalProfit = filteredTransactions
     .filter(t => t.profit !== null)
     .reduce((sum, t) => sum + (t.profit || 0), 0);
   
-  const totalCommission = transactions
+  const totalCommission = filteredTransactions
     .filter(t => t.commission !== null)
     .reduce((sum, t) => sum + (t.commission || 0), 0);
 
@@ -141,7 +210,77 @@ export default function TransactionsPage() {
       <div className="container mx-auto px-4 py-10">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">İşlemler</h1>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtrele
+            </Button>
+            <Button
+              variant="outline"
+              onClick={exportTransactionsToExcel}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Excel'e Aktar
+            </Button>
+          </div>
         </div>
+
+        {showFilters && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Filtreler</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Arama</label>
+                  <Input
+                    placeholder="Müşteri, hisse, aracı kurum ara..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">İşlem Tipi</label>
+                  <Select value={typeFilter} onValueChange={(value: "ALL" | "BUY" | "SELL") => setTypeFilter(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Tümü</SelectItem>
+                      <SelectItem value="BUY">Alış</SelectItem>
+                      <SelectItem value="SELL">Satış</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Tarih</label>
+                  <Input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setTypeFilter("ALL");
+                    setDateFilter("");
+                  }}
+                >
+                  Filtreleri Temizle
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card>
@@ -149,7 +288,7 @@ export default function TransactionsPage() {
               <CardTitle className="text-sm font-medium">Toplam İşlem</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{transactions.length}</p>
+              <p className="text-2xl font-bold">{filteredTransactions.length}</p>
             </CardContent>
           </Card>
           <Card>
@@ -177,6 +316,8 @@ export default function TransactionsPage() {
           <CardContent>
             {transactions.length === 0 ? (
               <p>Henüz işlem bulunmamaktadır.</p>
+            ) : filteredTransactions.length === 0 ? (
+              <p>Filtrelere uygun işlem bulunamadı.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -196,7 +337,7 @@ export default function TransactionsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((transaction) => (
+                  {filteredTransactions.map((transaction) => (
                     <TableRow key={transaction.id}>
                       <TableCell>{new Date(transaction.date).toLocaleDateString('tr-TR')}</TableCell>
                       <TableCell>
