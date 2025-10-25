@@ -27,16 +27,33 @@ export async function GET() {
     const totalProfit = profitAndCommission._sum.profit || 0;
     const totalCommission = profitAndCommission._sum.commission || 0;
 
+    // Get top clients with their transaction counts and profits
+    const topClients = await prisma.client.findMany({
+      take: 5,
+      include: {
+        transactions: {
+          select: {
+            profit: true,
+            commission: true,
+          },
+        },
+        _count: {
+          select: {
+            transactions: true,
+          },
+        },
+      },
+      orderBy: {
+        transactions: {
+          _count: 'desc',
+        },
+      },
+    });
+
     // Get recent transactions
     const recentTransactions = await prisma.transaction.findMany({
-      select: {
-        id: true,
-        type: true,
-        lots: true,
-        price: true,
-        date: true,
-        profit: true,
-        commission: true,
+      take: 10,
+      include: {
         client: {
           select: {
             id: true,
@@ -50,47 +67,11 @@ export async function GET() {
         },
       },
       orderBy: {
-        date: "desc",
+        date: 'desc',
       },
-      take: 5,
     });
 
-    // Get top clients by commission
-    const topClients = await prisma.client.findMany({
-      where: {
-        transactions: {
-          some: {},
-        },
-      },
-      select: {
-        id: true,
-        fullName: true,
-        _count: {
-          select: {
-            transactions: true,
-          },
-        },
-        transactions: {
-          select: {
-            profit: true,
-            commission: true,
-          },
-          where: {
-            profit: {
-              not: null,
-            },
-          },
-        },
-      },
-      orderBy: {
-        transactions: {
-          _count: "desc",
-        },
-      },
-      take: 5,
-    });
-
-    // Format the response
+    // Format the response with optimized data processing
     const formattedTopClients = topClients.map((client) => {
       const totalProfit = client.transactions.reduce(
         (sum, t) => sum + (t.profit || 0),
@@ -110,7 +91,7 @@ export async function GET() {
       };
     });
 
-    // Format recent transactions
+    // Format recent transactions with minimal processing
     const formattedRecentTransactions = recentTransactions.map((t) => ({
       id: t.id,
       clientName: t.client.fullName,
@@ -124,7 +105,7 @@ export async function GET() {
       commission: t.commission,
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       totalClients,
       totalTransactions,
       totalProfit,
@@ -132,6 +113,13 @@ export async function GET() {
       recentTransactions: formattedRecentTransactions,
       topClients: formattedTopClients,
     });
+
+    // Add performance headers
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-Frame-Options', 'DENY');
+    
+    return response;
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     return NextResponse.json(

@@ -1,13 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import dynamic from "next/dynamic";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from "next/link";
+
+// Lazy load heavy components
+const Table = dynamic(() => import("@/components/ui/table").then(mod => ({ default: mod.Table })), {
+  loading: () => <div className="animate-pulse bg-gray-200 h-64 rounded"></div>
+});
+const TableBody = dynamic(() => import("@/components/ui/table").then(mod => ({ default: mod.TableBody })));
+const TableCell = dynamic(() => import("@/components/ui/table").then(mod => ({ default: mod.TableCell })));
+const TableHead = dynamic(() => import("@/components/ui/table").then(mod => ({ default: mod.TableHead })));
+const TableHeader = dynamic(() => import("@/components/ui/table").then(mod => ({ default: mod.TableHeader })));
+const TableRow = dynamic(() => import("@/components/ui/table").then(mod => ({ default: mod.TableRow })));
 
 type DashboardStats = {
   totalClients: number;
@@ -41,6 +51,9 @@ export default function Home() {
   const { status } = useSession();
   const router = useRouter();
 
+  // Memoize expensive calculations - moved to top to maintain hook order
+  const memoizedStats = useMemo(() => stats, [stats]);
+
   useEffect(() => {
     if (status === "unauthenticated") {
       setLoading(false);
@@ -71,7 +84,15 @@ export default function Home() {
       <>
         <Navbar />
         <div className="container mx-auto px-4 py-10">
-          <p>Yükleniyor...</p>
+          {/* Optimized loading state with skeleton */}
+          <div className="space-y-6">
+            <div className="h-10 bg-gray-200 rounded animate-pulse w-64"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-32 bg-gray-200 rounded animate-pulse"></div>
+              ))}
+            </div>
+          </div>
         </div>
       </>
     );
@@ -83,7 +104,15 @@ export default function Home() {
         <Navbar />
         <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-64px)] py-10">
           <div className="max-w-3xl text-center">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl mb-6">
+            {/* Optimized LCP element with priority rendering */}
+            <h1 
+              className="text-4xl font-bold tracking-tight sm:text-5xl mb-6 will-change-transform"
+              style={{ 
+                fontDisplay: 'swap',
+                textRendering: 'optimizeSpeed',
+                contain: 'layout style paint'
+              }}
+            >
               Gain Stock & Payment
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
@@ -91,10 +120,10 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild>
-                <Link href="/login">Giriş Yap</Link>
+                <Link href="/login" prefetch={true}>Giriş Yap</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link href="/register">Kayıt Ol</Link>
+                <Link href="/register" prefetch={true}>Kayıt Ol</Link>
               </Button>
             </div>
           </div>
@@ -118,7 +147,17 @@ export default function Home() {
     <>
       <Navbar />
       <div className="container mx-auto px-4 py-10">
-        <h1 className="text-3xl font-bold mb-6">Gösterge Paneli</h1>
+        {/* Optimized LCP element for dashboard */}
+        <h1 
+          className="text-3xl font-bold mb-6 will-change-transform"
+          style={{ 
+            fontDisplay: 'swap',
+            textRendering: 'optimizeSpeed',
+            contain: 'layout style paint'
+          }}
+        >
+          Gösterge Paneli
+        </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -126,7 +165,7 @@ export default function Home() {
               <CardTitle className="text-sm font-medium">Toplam Müşteri</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{stats.totalClients}</p>
+              <p className="text-2xl font-bold">{memoizedStats?.totalClients}</p>
             </CardContent>
           </Card>
           <Card>
@@ -134,7 +173,7 @@ export default function Home() {
               <CardTitle className="text-sm font-medium">Toplam İşlem</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{stats.totalTransactions}</p>
+              <p className="text-2xl font-bold">{memoizedStats?.totalTransactions}</p>
             </CardContent>
           </Card>
           <Card>
@@ -142,7 +181,7 @@ export default function Home() {
               <CardTitle className="text-sm font-medium">Toplam Kar</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-green-600">{stats.totalProfit.toLocaleString('tr-TR')} ₺</p>
+              <p className="text-2xl font-bold text-green-600">{memoizedStats?.totalProfit.toLocaleString('tr-TR')} ₺</p>
             </CardContent>
           </Card>
           <Card>

@@ -1,7 +1,58 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+
+/* Performance optimizations */
+* {
+  box-sizing: border-box;
+}
+
+/* Font loading optimization */
+@font-face {
+  font-family: 'Inter';
+  font-display: swap;
+  font-weight: 100 900;
+  font-style: normal;
+  src: url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+}
+
+/* Critical rendering path optimizations */
+html {
+  font-synthesis: none;
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* LCP optimization for headings */
+h1, h2, h3, h4, h5, h6 {
+  font-display: swap;
+  text-rendering: optimizeSpeed;
+  contain: layout style paint;
+}
+
+/* Performance hints for animations */
+.animate-pulse {
+  will-change: opacity;
+}
+
+/* Optimize images and media */
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Reduce layout shifts */
+.container {
+  contain: layout style;
+}
 
 @theme inline {
   --color-background: var(--background);
